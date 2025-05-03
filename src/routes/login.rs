@@ -1,12 +1,15 @@
 use crate::{
-    app::{error::AppStatus, state::AppState},
+    app::{error::AppStatus as Status, state::AppState},
     services::user::UserService,
 };
 
 use axum::{Json, extract::State};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+use std::sync::Arc;
 
 /// Authentication request
+#[derive(Serialize, Deserialize)]
 pub struct Request {
     /// Username
     username: String,
@@ -29,9 +32,9 @@ pub struct Response {
 }
 
 pub async fn login_post_handler<S>(
-    State(state): State<AppState<S>>,
+    State(state): State<Arc<AppState<S>>>,
     Json(request_body): Json<Request>,
-) -> Result<Response, AppStatus>
+) -> Result<Json<Response>, Status>
 where
     S: UserService,
 {
@@ -46,24 +49,33 @@ where
     let access_token =
         UserService::into_jwt(&state.db, &user_model, &state.secret, expires_in).await?;
 
-    Ok(Response {
+    Ok(Json(Response {
         access_token,
         token_type,
         expires_in,
-    })
+    }))
 }
 
 #[cfg(test)]
 mod tests {
     mod login_post_handler {
-        use axum::{Json, extract::State};
+        use axum::{
+            Router,
+            body::Body,
+            http::{Request as AxumRequest, StatusCode},
+            routing::post,
+        };
 
         use crate::{
-            app::error::AppStatus, app::state::AppState, routes::login::Request,
+            app::error::AppStatus as Status, app::state::AppState, routes::login::Request,
             routes::login::login_post_handler, services::user::MockUserService,
         };
 
         use entity::user::Model as UserModel;
+
+        use std::sync::Arc;
+
+        use tower::ServiceExt;
 
         #[tokio::test]
         async fn success() {
@@ -84,22 +96,31 @@ mod tests {
             mock.expect_into_jwt()
                 .return_once(move |_, _, _| Ok("mock_token".to_string()));
 
-            let req = Request {
-                username: "username".to_string(),
-                password: "password".to_string(),
-            };
-
-            let response = login_post_handler(
-                State(AppState {
+            let router: Router = Router::new()
+                .route("/login", post(login_post_handler))
+                .with_state(Arc::new(AppState {
                     db: mock,
                     secret: "secret".into(),
-                }),
-                Json(req),
-            )
-            .await;
+                }));
 
-            assert!(
-                response.is_ok(),
+            let request = AxumRequest::builder()
+                .uri("/login")
+                .method("POST")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    serde_json::to_string(&Request {
+                        username: "username".to_string(),
+                        password: "password".to_string(),
+                    })
+                    .unwrap(),
+                ))
+                .unwrap();
+
+            let res = router.oneshot(request).await.unwrap();
+
+            assert_eq!(
+                res.status(),
+                StatusCode::OK,
                 "When user sends CORRECT CREDENTIALS, 'OK' (200) MUST be returned!"
             );
         }
@@ -109,27 +130,36 @@ mod tests {
             let mut mock = MockUserService::new();
 
             mock.expect_authenticate()
-                .return_once(move |_, _| Err(AppStatus::Unauthenticated(None)));
+                .return_once(move |_, _| Err(Status::Unauthenticated(None)));
 
             mock.expect_into_jwt()
                 .return_once(move |_, _, _| Ok("mock_token".to_string()));
 
-            let req = Request {
-                username: "username".to_string(),
-                password: "password".to_string(),
-            };
-
-            let response = login_post_handler(
-                State(AppState {
+            let router: Router = Router::new()
+                .route("/login", post(login_post_handler))
+                .with_state(Arc::new(AppState {
                     db: mock,
                     secret: "secret".into(),
-                }),
-                Json(req),
-            )
-            .await;
+                }));
 
-            assert!(
-                matches!(response, Err(AppStatus::Unauthenticated(_))),
+            let request = AxumRequest::builder()
+                .uri("/login")
+                .method("POST")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    serde_json::to_string(&Request {
+                        username: "username".to_string(),
+                        password: "password".to_string(),
+                    })
+                    .unwrap(),
+                ))
+                .unwrap();
+
+            let res = router.oneshot(request).await.unwrap();
+
+            assert_eq!(
+                res.status(),
+                StatusCode::UNAUTHORIZED,
                 "When user sends INCORRECT CREDENTIALS, 'Unauthorized' (401) MUST be returned!"
             );
         }

@@ -111,6 +111,18 @@ pub trait UserService {
     /// On success: encoded JWT token
     /// On failure: application error
     async fn into_jwt(&self, user: &UserModel, secret: &str, ttl: u64) -> Result<String, Status>;
+
+    /// Retrieve user from the database
+    ///
+    /// # Arguments
+    ///
+    /// * 'user_id' - user ID
+    ///
+    /// # Returns
+    ///
+    /// On success: user model
+    /// On failure: application status
+    async fn find_one(&self, user_id: i32) -> Result<Option<UserModel>, Status>;
 }
 
 mod utils {
@@ -172,6 +184,19 @@ mod utils {
 }
 
 impl UserService for sea_orm::DatabaseConnection {
+    async fn find_one(&self, user_id: i32) -> Result<Option<UserModel>, Status> {
+        let user = user::Entity::find_by_id(user_id)
+            .one(self)
+            .await
+            .map_err(|e| {
+                error!("Failed to find user: {e}");
+
+                Status::Internal(None)
+            })?;
+
+        Ok(user)
+    }
+
     async fn authenticate(&self, username: &str, password: &str) -> Result<UserModel, Status> {
         let user = user::Entity::find()
             .filter(user::Column::Username.contains(username))

@@ -5,7 +5,7 @@ use tokio::net::TcpListener;
 
 use crate::config::AppConfig;
 
-use axum::{Router, routing::post};
+use axum::Router;
 
 pub struct App {
     listen_host: String,
