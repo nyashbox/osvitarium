@@ -12,10 +12,10 @@ use std::sync::Arc;
 #[derive(Serialize, Deserialize)]
 pub struct Request {
     /// Username
-    username: String,
+    pub username: String,
 
     /// Plain-text password
-    password: String,
+    pub password: String,
 }
 
 /// Authentication response

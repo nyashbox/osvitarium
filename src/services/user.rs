@@ -125,7 +125,7 @@ pub trait UserService {
     async fn find_one(&self, user_id: i32) -> Result<Option<UserModel>, Status>;
 }
 
-mod utils {
+pub mod utils {
     use log::error;
 
     use argon2::{
