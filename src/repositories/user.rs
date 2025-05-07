@@ -38,6 +38,7 @@ pub enum User {
     Principal(UserModel, PrincipalModel),
 }
 
+#[mockall::automock]
 #[allow(async_fn_in_trait)]
 pub trait UserRepository {
     /// Create new user in the storage

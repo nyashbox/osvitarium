@@ -1,5 +1,6 @@
 use crate::{
     app::{error::AppStatus as Status, state::AppState},
+    repositories::user::UserRepository,
     services::user::UserService,
 };
 
@@ -36,7 +37,7 @@ pub async fn login_post_handler<S>(
     Json(request_body): Json<Request>,
 ) -> Result<Json<Response>, Status>
 where
-    S: UserService,
+    S: UserRepository,
 {
     let Request { username, password } = request_body;
 
@@ -44,10 +45,20 @@ where
     let expires_in: u64 = 3600;
     let token_type: String = "Bearer".into();
 
-    let user_model = UserService::authenticate(&state.db, &username, &password).await?;
+    let user_model = state
+        .db
+        .find_by_username(username.as_str())
+        .await
+        .map_err(|e| match e {
+            Status::Unauthenticated(_) | Status::NotFound(_) => {
+                Status::Unauthenticated(Some("Incorrect username or password!".into()))
+            }
+            _ => Status::Internal(None),
+        })?;
 
-    let access_token =
-        UserService::into_jwt(&state.db, &user_model, &state.secret, expires_in).await?;
+    user_model.authenticate(password.as_str())?;
+
+    let access_token = user_model.into_jwt(state.secret.as_str(), expires_in)?;
 
     Ok(Json(Response {
         access_token,
@@ -67,9 +78,13 @@ mod tests {
         };
 
         use crate::{
-            app::error::AppStatus as Status, app::state::AppState, routes::login::Request,
-            routes::login::login_post_handler, services::user::MockUserService,
+            app::{error::AppStatus as Status, state::AppState},
+            repositories::user::{MockUserRepository, User},
+            routes::login::{Request, login_post_handler},
+            services::user::{MockUserService, utils},
         };
+
+        use entity::student::Model as StudentModel;
 
         use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
 
@@ -79,23 +94,25 @@ mod tests {
 
         #[tokio::test]
         async fn success() {
-            let mut mock = MockUserService::new();
+            let mut mock = MockUserRepository::new();
 
-            mock.expect_authenticate().return_once(move |_, _| {
-                Ok(UserModel {
-                    user_id: 1,
-                    username: "username".to_string(),
-                    fullname: "John Doe".to_string(),
-                    password: "$argon2id$v=19$m=16,t=2,p=1$cGFzc3dvcmQ$8vDS3rsezOjrur01dF12EA"
-                        .to_string(),
-                    description: "".to_string(),
-                    metadata: "{}".into(),
-                    role: Some(UserRole::Student),
-                })
+            mock.expect_find_by_username().return_once(move |_| {
+                Ok(User::Student(
+                    UserModel {
+                        user_id: 1,
+                        username: "johndoe".into(),
+                        fullname: "John Doe".into(),
+                        password: utils::hash_password("password").unwrap(),
+                        description: " ".into(),
+                        metadata: "{}".into(),
+                        role: Some(UserRole::Student),
+                    },
+                    StudentModel {
+                        user_id: 1,
+                        student_id: 1,
+                    },
+                ))
             });
-
-            mock.expect_into_jwt()
-                .return_once(move |_, _, _| Ok("mock_token".to_string()));
 
             let router: Router = Router::new()
                 .route("/login", post(login_post_handler))
@@ -128,13 +145,25 @@ mod tests {
 
         #[tokio::test]
         async fn wrong_credentials() {
-            let mut mock = MockUserService::new();
+            let mut mock = MockUserRepository::new();
 
-            mock.expect_authenticate()
-                .return_once(move |_, _| Err(Status::Unauthenticated(None)));
-
-            mock.expect_into_jwt()
-                .return_once(move |_, _, _| Ok("mock_token".to_string()));
+            mock.expect_find_by_username().return_once(move |_| {
+                Ok(User::Student(
+                    UserModel {
+                        user_id: 1,
+                        username: "username".into(),
+                        fullname: "John Doe".into(),
+                        password: utils::hash_password("wrong").unwrap(),
+                        description: " ".into(),
+                        metadata: "{}".into(),
+                        role: Some(UserRole::Student),
+                    },
+                    StudentModel {
+                        user_id: 1,
+                        student_id: 1,
+                    },
+                ))
+            });
 
             let router: Router = Router::new()
                 .route("/login", post(login_post_handler))

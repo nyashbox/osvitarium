@@ -1,7 +1,10 @@
 use crate::{
     app::{error::AppStatus as Status, state::AppState},
+    repositories::user::User,
     services::user::{JWTClaims, UserService},
 };
+
+use crate::repositories::user::UserRepository;
 
 use axum::{Json, extract::State};
 
@@ -33,7 +36,7 @@ pub async fn me_get_handler<S>(
     TypedHeader(Authorization(bearer)): TypedHeader<Authorization<Bearer>>,
 ) -> Result<Json<Response>, Status>
 where
-    S: UserService,
+    S: UserRepository,
 {
     let token = decode::<JWTClaims>(
         bearer.token(),
@@ -47,8 +50,11 @@ where
     })?
     .claims;
 
-    let Some(user) = UserService::find_one(&state.db, token.sub).await? else {
-        return Err(Status::Internal(None));
+    let user = state.db.find_by_id(token.sub).await?;
+    let user = match user {
+        User::Student(model, _) => model,
+        User::Teacher(model, _) => model,
+        User::Principal(model, _) => model,
     };
 
     Ok(Json(Response {
@@ -70,29 +76,40 @@ mod tests {
         use tower::ServiceExt;
 
         use axum::{Router, body::Body, http::StatusCode, routing::get};
-        use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
+        use entity::{
+            sea_orm_active_enums::UserRole, student::Model as StudentModel,
+            user::Model as UserModel,
+        };
 
         use crate::{
-            app::state::AppState, routes::me::me_get_handler, services::user::MockUserService,
+            app::state::AppState,
+            repositories::user::{MockUserRepository, User},
+            routes::me::me_get_handler,
         };
 
         use axum::http::Request;
 
         #[tokio::test]
         pub async fn success() {
-            let mut mock = MockUserService::new();
+            let mut mock = MockUserRepository::new();
             let auth_header = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXhfc3ViIjoxLCJzdWIiOjEsImlhdCI6MTExMTExMTExMTEsImV4cCI6OTk5OTk5OTk5OTksInJvbGUiOiJzdHVkZW50In0.zOIV8xbN1eIM_n7AciKbuTkpgKbCHK6Kf1vFMgv3SKY";
 
-            mock.expect_find_one().returning(move |_| {
-                Ok(Some(UserModel {
-                    user_id: 1,
-                    username: "johndoe".into(),
-                    fullname: "John Doe".into(),
-                    password: "password".into(),
-                    description: " ".into(),
-                    metadata: "{}".into(),
-                    role: Some(UserRole::Student),
-                }))
+            mock.expect_find_by_id().returning(move |_| {
+                Ok(User::Student(
+                    UserModel {
+                        user_id: 1,
+                        username: "johndoe".into(),
+                        fullname: "John Doe".into(),
+                        password: "password".into(),
+                        description: " ".into(),
+                        metadata: "{}".into(),
+                        role: Some(UserRole::Student),
+                    },
+                    StudentModel {
+                        user_id: 1,
+                        student_id: 1,
+                    },
+                ))
             });
 
             let router: Router =

@@ -1,14 +1,8 @@
-use crate::app::error::AppStatus as Status;
+use crate::{app::error::AppStatus as Status, repositories};
 
 use jsonwebtoken::{EncodingKey, Header, encode};
 
-use entity::{
-    principal::{Entity as PrincipalEntity, Model as PrincipalModel},
-    student::{Entity as StudentEntity, Model as StudentModel},
-    teacher::{Entity as TeacherEntity, Model as TeacherModel},
-    user,
-    user::{ActiveModel as ActiveUserModel, Model as UserModel},
-};
+use repositories::user::User;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -34,75 +28,23 @@ pub struct JWTClaims {
 }
 
 #[mockall::automock]
-#[allow(async_fn_in_trait)]
 pub trait UserService {
-    /// Authenticate user with 'username:password' pair
+    /// Authenticate user
     ///
     /// # Arguments
     ///
-    /// * 'username' - username
     /// * 'password' - plain-text password
     ///
     /// # Returns
     ///
     /// On success: authenticated user's model
     /// On failure: database error/empty option
-    async fn authenticate(&self, username: &str, password: &str) -> Result<UserModel, Status>;
+    fn authenticate(&self, password: &str) -> Result<(), Status>;
 
-    /// Create new user
+    /// Convert user into JWT
     ///
     /// # Arguments
     ///
-    /// * 'username' - username
-    /// * 'password' - plain-text password
-    ///
-    /// # Returns
-    ///
-    /// On success: user model
-    /// On failure: database error
-    async fn create(&self, username: &str, password: &str) -> Result<UserModel, Status>;
-
-    /// Check if user is a principal
-    ///
-    /// # Arguments
-    ///
-    /// * 'user' - user model
-    ///
-    /// # Returns
-    ///
-    /// On success: principal model
-    /// On failure: database error
-    async fn is_principal(&self, user: &UserModel) -> Result<Option<PrincipalModel>, Status>;
-
-    /// Check if user is a teacher
-    ///
-    /// # Arguments
-    ///
-    /// * 'user' - user model
-    ///
-    /// # Returns
-    ///
-    /// On success: teacher model
-    /// On failure: database error
-    async fn is_teacher(&self, user: &UserModel) -> Result<Option<TeacherModel>, Status>;
-
-    /// Check if user is a student
-    ///
-    /// # Arguments
-    ///
-    /// * 'user' - user model
-    ///
-    /// # Returns
-    ///
-    /// On success: student model
-    /// On failure: database error
-    async fn is_student(&self, user: &UserModel) -> Result<Option<StudentModel>, Status>;
-
-    /// Convert user model into JWT
-    ///
-    /// # Arguments
-    ///
-    /// * 'user' - User model
     /// * 'secret' - JWT secret
     /// * 'ttl' - Session TTL
     ///
@@ -110,19 +52,7 @@ pub trait UserService {
     ///
     /// On success: encoded JWT token
     /// On failure: application error
-    async fn into_jwt(&self, user: &UserModel, secret: &str, ttl: u64) -> Result<String, Status>;
-
-    /// Retrieve user from the database
-    ///
-    /// # Arguments
-    ///
-    /// * 'user_id' - user ID
-    ///
-    /// # Returns
-    ///
-    /// On success: user model
-    /// On failure: application status
-    async fn find_one(&self, user_id: i32) -> Result<Option<UserModel>, Status>;
+    fn into_jwt(&self, secret: &str, ttl: u64) -> Result<String, Status>;
 }
 
 pub mod utils {
@@ -183,106 +113,22 @@ pub mod utils {
     }
 }
 
-impl UserService for sea_orm::DatabaseConnection {
-    async fn find_one(&self, user_id: i32) -> Result<Option<UserModel>, Status> {
-        let user = user::Entity::find_by_id(user_id)
-            .one(self)
-            .await
-            .map_err(|e| {
-                error!("Failed to find user: {e}");
+impl UserService for User {
+    fn authenticate(&self, password: &str) -> Result<(), Status> {
+        let user_model = match self {
+            User::Student(model, _) => model,
+            User::Teacher(model, _) => model,
+            User::Principal(model, _) => model,
+        };
 
-                Status::Internal(None)
-            })?;
-
-        Ok(user)
-    }
-
-    async fn authenticate(&self, username: &str, password: &str) -> Result<UserModel, Status> {
-        let user = user::Entity::find()
-            .filter(user::Column::Username.contains(username))
-            .one(self)
-            .await
-            .map_err(|e| {
-                error!("Error while authenticating user: {e}");
-
-                Status::Internal(None)
-            })?;
-
-        match user {
-            Some(model) => {
-                if utils::verify_password(password, &model.password)? {
-                    Ok(model)
-                } else {
-                    Err(Status::Unauthenticated(Some(
-                        "Invalid username or password!".to_string(),
-                    )))
-                }
-            }
-            None => Err(Status::Unauthenticated(Some(
-                "Invalid username or password!".to_string(),
-            ))),
+        if utils::verify_password(password, &user_model.password)? {
+            Ok(())
+        } else {
+            Err(Status::Unauthenticated(None))
         }
     }
 
-    async fn create(&self, username: &str, password: &str) -> Result<UserModel, Status> {
-        let hashed_password = utils::hash_password(&password)?;
-
-        let user = ActiveUserModel {
-            username: ActiveValue::Set(username.into()),
-            password: ActiveValue::Set(hashed_password),
-            ..Default::default()
-        };
-
-        user.insert(self).await.map_err(|e| {
-            error!("Error while creating new user: {e}");
-
-            Status::Internal(None)
-        })
-    }
-
-    async fn is_principal(&self, user: &UserModel) -> Result<Option<PrincipalModel>, Status> {
-        let principal = user
-            .find_related(PrincipalEntity)
-            .one(self)
-            .await
-            .map_err(|e| {
-                error!("Error while verifying if user is a principal: {e}");
-
-                Status::Internal(None)
-            })?;
-
-        Ok(principal)
-    }
-
-    async fn is_student(&self, user: &UserModel) -> Result<Option<StudentModel>, Status> {
-        let student = user
-            .find_related(StudentEntity)
-            .one(self)
-            .await
-            .map_err(|e| {
-                error!("Error while verifying if user is a student: {e}");
-
-                Status::Internal(None)
-            })?;
-
-        Ok(student)
-    }
-
-    async fn is_teacher(&self, user: &UserModel) -> Result<Option<TeacherModel>, Status> {
-        let teacher = user
-            .find_related(TeacherEntity)
-            .one(self)
-            .await
-            .map_err(|e| {
-                error!("Error while verifying if user is a teacher: {e}");
-
-                Status::Internal(None)
-            })?;
-
-        Ok(teacher)
-    }
-
-    async fn into_jwt(&self, user: &UserModel, secret: &str, ttl: u64) -> Result<String, Status> {
+    fn into_jwt(&self, secret: &str, ttl: u64) -> Result<String, Status> {
         let iat = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| {
@@ -292,31 +138,31 @@ impl UserService for sea_orm::DatabaseConnection {
             })?
             .as_secs();
 
-        let aux_sub: i32;
-        let role: String;
-
-        if let Some(model) = self.is_student(user).await? {
-            aux_sub = model.student_id;
-            role = "student".to_string();
-        } else if let Some(model) = self.is_teacher(user).await? {
-            aux_sub = model.teacher_id;
-            role = "teacher".to_string();
-        } else if let Some(model) = self.is_principal(user).await? {
-            aux_sub = model.principal_id;
-            role = "principal".to_string();
-        } else {
-            return Err(Status::Internal(None));
-        }
-
-        let claims = JWTClaims {
-            exp: iat + ttl,
-            iat,
-            aux_sub,
-            sub: user.user_id,
-            role,
+        let claims = match self {
+            User::Student(user, student) => JWTClaims {
+                exp: iat + ttl,
+                iat,
+                aux_sub: student.student_id,
+                sub: user.user_id,
+                role: "student".into(),
+            },
+            User::Teacher(user, teacher) => JWTClaims {
+                exp: iat + ttl,
+                iat,
+                aux_sub: teacher.teacher_id,
+                sub: user.user_id,
+                role: "teacher".into(),
+            },
+            User::Principal(user, principal) => JWTClaims {
+                exp: iat + ttl,
+                iat,
+                aux_sub: principal.principal_id,
+                sub: user.user_id,
+                role: "principal".into(),
+            },
         };
 
-        let token = encode(
+        Ok(encode(
             &Header::default(),
             &claims,
             &EncodingKey::from_secret(secret.as_bytes()),
@@ -325,288 +171,12 @@ impl UserService for sea_orm::DatabaseConnection {
             error!("Error while encoding JWT token: {e}");
 
             Status::Internal(None)
-        })?;
-
-        Ok(token)
+        })?)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    mod authenticate {
-        use crate::services::user::{UserModel, UserService};
-
-        use entity::sea_orm_active_enums::UserRole;
-        use sea_orm::{DatabaseBackend, MockDatabase};
-
-        #[tokio::test]
-        pub async fn success() {
-            let db = MockDatabase::new(DatabaseBackend::Postgres);
-            let db = db.append_query_results([vec![UserModel {
-                user_id: 1,
-                username: "username".to_string(),
-                fullname: "John Doe".to_string(),
-                password: "$argon2id$v=19$m=16,t=2,p=1$cGFzc3dvcmQ$8vDS3rsezOjrur01dF12EA"
-                    .to_string(),
-                description: "".to_string(),
-                metadata: "{}".into(),
-                role: Some(UserRole::Student),
-            }]]);
-
-            let response = UserService::authenticate(
-                &db.into_connection(),
-                &"username".to_string(),
-                &"password".to_string(),
-            )
-            .await;
-
-            assert!(
-                response.is_ok(),
-                "If CORRECT 'username:password' pair is specified, user model MUST be returned"
-            );
-        }
-
-        #[tokio::test]
-        pub async fn bad_password() {
-            let db = MockDatabase::new(DatabaseBackend::Postgres);
-            let db = db.append_query_results([vec![UserModel {
-                user_id: 1,
-                username: "username".to_string(),
-                fullname: "John Doe".to_string(),
-                password: "$argon2id$v=19$m=16,t=2,p=1$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-                    .to_string(),
-                description: "".to_string(),
-                metadata: "{}".into(),
-                role: Some(UserRole::Student),
-            }]]);
-
-            let response = UserService::authenticate(
-                &db.into_connection(),
-                &"username".to_string(),
-                &"password".to_string(),
-            )
-            .await;
-
-            assert!(
-                response.is_err(),
-                "If INCORRECT 'username:password' pair is specified, error MUST be returned!"
-            );
-        }
-    }
-
-    mod into_jwt {
-        use crate::services::user::{JWTClaims, UserService};
-
-        use entity::{
-            principal::Model as PrincipalModel, sea_orm_active_enums::UserRole,
-            student::Model as StudentModel, teacher::Model as TeacherModel,
-            user::Model as UserModel,
-        };
-
-        use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
-        use sea_orm::{DatabaseBackend, DbErr, MockDatabase};
-
-        #[tokio::test]
-        pub async fn success() {
-            let user = UserModel {
-                user_id: 1,
-                username: "johndoe".into(),
-                fullname: "John Doe".into(),
-                password: "password".into(),
-                description: " ".into(),
-                metadata: "{}".into(),
-                role: Some(UserRole::Student),
-            };
-
-            assert_eq!(
-                {
-                    let student = StudentModel {
-                        student_id: 1,
-                        user_id: 1,
-                    };
-
-                    let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres);
-                    let db = db.append_query_results([
-                        // First query ('student' table) - returns STUDENT MODEL
-                        vec![student],
-                    ]);
-
-                    let token = UserService::into_jwt(&db.into_connection(), &user, "secret", 100)
-                        .await
-                        .unwrap();
-
-                    decode::<JWTClaims>(
-                        token.as_str(),
-                        &DecodingKey::from_secret("secret".as_bytes()),
-                        &Validation::new(Algorithm::HS256),
-                    )
-                    .unwrap()
-                    .claims
-                    .role
-                },
-                "student",
-                "When user is a STUDENT, JWT token with role 'student' MUST be returned"
-            );
-
-            assert_eq!(
-                {
-                    let teacher = TeacherModel {
-                        teacher_id: 1,
-                        user_id: 1,
-                    };
-
-                    let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres);
-                    let db = db.append_query_results([
-                        // First query ('student' table) - returns NOTHING
-                        vec![],
-                        // Second query ('teacher' table) - returns TEACHER MODEL
-                        vec![teacher],
-                    ]);
-
-                    let token = UserService::into_jwt(&db.into_connection(), &user, "secret", 100)
-                        .await
-                        .unwrap();
-
-                    decode::<JWTClaims>(
-                        token.as_str(),
-                        &DecodingKey::from_secret("secret".as_bytes()),
-                        &Validation::new(Algorithm::HS256),
-                    )
-                    .unwrap()
-                    .claims
-                    .role
-                },
-                "teacher",
-                "When user is a TEACHER, JWT token with role 'teacher' MUST be returned"
-            );
-
-            assert_eq!(
-                {
-                    let principal = PrincipalModel {
-                        principal_id: 1,
-                        user_id: 1,
-                    };
-
-                    let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres);
-                    let db = db.append_query_results([
-                        // First query (student table) returns NOTHING
-                        vec![],
-                        // Second query (teacher table) returns NOTHING
-                        vec![],
-                        // Third query (principal table) return PRINCIPAL MODEL
-                        vec![principal],
-                    ]);
-
-                    let token = UserService::into_jwt(&db.into_connection(), &user, "secret", 100)
-                        .await
-                        .unwrap();
-
-                    decode::<JWTClaims>(
-                        token.as_str(),
-                        &DecodingKey::from_secret("secret".as_bytes()),
-                        &Validation::new(Algorithm::HS256),
-                    )
-                    .unwrap()
-                    .claims
-                    .role
-                },
-                "principal",
-                "When user is a PRINCIPAL, JWT token with role 'principal' MUST be returned"
-            );
-        }
-
-        #[tokio::test]
-        pub async fn db_error() {
-            let user = UserModel {
-                user_id: 1,
-                username: "johndoe".into(),
-                fullname: "John Doe".into(),
-                password: "password".into(),
-                description: " ".into(),
-                metadata: "{}".into(),
-                role: Some(UserRole::Student),
-            };
-
-            let db = MockDatabase::new(DatabaseBackend::Postgres);
-            let db = db.append_query_errors([DbErr::RecordNotFound("".into())]);
-
-            let token = UserService::into_jwt(&db.into_connection(), &user, "secret", 100).await;
-
-            assert!(
-                token.is_err(),
-                "When database returns ERROR, received error MUST be propagated"
-            )
-        }
-
-        #[tokio::test]
-        pub async fn corrupted_data() {
-            let user = UserModel {
-                user_id: 1,
-                username: "johndoe".into(),
-                fullname: "John Doe".into(),
-                password: "password".into(),
-                description: " ".into(),
-                metadata: "{}".into(),
-                role: Some(UserRole::Student),
-            };
-
-            let db = MockDatabase::new(DatabaseBackend::Postgres);
-            let db = db.append_query_results([
-                Vec::<UserModel>::new(),
-                Vec::<UserModel>::new(),
-                Vec::<UserModel>::new(),
-            ]);
-
-            let token = UserService::into_jwt(&db.into_connection(), &user, "secret", 100).await;
-
-            assert!(
-                token.is_err(),
-                "When user model is CORRUPTED (e.g. user exists without specialization), error MUST be returned"
-            )
-        }
-    }
-
-    mod create {
-        use crate::services::user::{UserService, utils::*};
-        use sea_orm::{DatabaseBackend, MockDatabase};
-
-        use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
-
-        #[tokio::test]
-        pub async fn success() {
-            let username = "johndoe".to_string();
-            let fullname = "John Doe".to_string();
-            let password = "password".to_string();
-            let password_hash = hash_password(&password).unwrap();
-            let description = "Account Description".to_string();
-
-            let db = MockDatabase::new(DatabaseBackend::Postgres);
-            let db = db.append_query_results([vec![UserModel {
-                username: username.clone(),
-                fullname: fullname.clone(),
-                password: password_hash.clone(),
-                description: description.clone(),
-                user_id: 1,
-                metadata: "{}".into(),
-                role: Some(UserRole::Student),
-            }]]);
-
-            let user =
-                UserService::create(&db.into_connection(), username.as_str(), password.as_str())
-                    .await;
-
-            assert!(
-                user.is_ok(),
-                "When 'create' request is successful, user model MUST be returned from the database"
-            );
-
-            assert!(
-                verify_password(&"password".to_string(), &user.unwrap().password).unwrap(),
-                "Model in the database MUST store argon2 hash of the password."
-            );
-        }
-    }
-
     mod utils {
         mod verify_password {
             use crate::services::user::utils::*;
