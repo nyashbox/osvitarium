@@ -3,6 +3,7 @@
 pub mod prelude;
 
 pub mod principal;
+pub mod sea_orm_active_enums;
 pub mod student;
 pub mod teacher;
 pub mod user;

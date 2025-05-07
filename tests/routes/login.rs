@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use crate::utils::*;
 
+use entity::sea_orm_active_enums::UserRole;
+use osvitarium_backend::repositories::user::UserRepository;
 use osvitarium_backend::routes::login::{Request, login_post_handler};
 
 use axum::{
@@ -17,7 +19,9 @@ pub async fn success() {
     let state = build_app_state("secret").await;
     empty_database(&state.db).await;
 
-    insert_student(&state.db, "username", "password").await;
+    UserRepository::create(&state.db, "username", "password", UserRole::Student)
+        .await
+        .expect("Student must be inserted without any issues!");
 
     let router: Router = Router::new()
         .route("/login", post(login_post_handler))

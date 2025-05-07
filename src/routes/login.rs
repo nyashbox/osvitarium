@@ -71,7 +71,7 @@ mod tests {
             routes::login::login_post_handler, services::user::MockUserService,
         };
 
-        use entity::user::Model as UserModel;
+        use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
 
         use std::sync::Arc;
 
@@ -90,6 +90,7 @@ mod tests {
                         .to_string(),
                     description: "".to_string(),
                     metadata: "{}".into(),
+                    role: Some(UserRole::Student),
                 })
             });
 

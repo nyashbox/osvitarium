@@ -336,6 +336,7 @@ mod tests {
     mod authenticate {
         use crate::services::user::{UserModel, UserService};
 
+        use entity::sea_orm_active_enums::UserRole;
         use sea_orm::{DatabaseBackend, MockDatabase};
 
         #[tokio::test]
@@ -349,6 +350,7 @@ mod tests {
                     .to_string(),
                 description: "".to_string(),
                 metadata: "{}".into(),
+                role: Some(UserRole::Student),
             }]]);
 
             let response = UserService::authenticate(
@@ -375,6 +377,7 @@ mod tests {
                     .to_string(),
                 description: "".to_string(),
                 metadata: "{}".into(),
+                role: Some(UserRole::Student),
             }]]);
 
             let response = UserService::authenticate(
@@ -395,8 +398,9 @@ mod tests {
         use crate::services::user::{JWTClaims, UserService};
 
         use entity::{
-            principal::Model as PrincipalModel, student::Model as StudentModel,
-            teacher::Model as TeacherModel, user::Model as UserModel,
+            principal::Model as PrincipalModel, sea_orm_active_enums::UserRole,
+            student::Model as StudentModel, teacher::Model as TeacherModel,
+            user::Model as UserModel,
         };
 
         use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
@@ -411,6 +415,7 @@ mod tests {
                 password: "password".into(),
                 description: " ".into(),
                 metadata: "{}".into(),
+                role: Some(UserRole::Student),
             };
 
             assert_eq!(
@@ -519,6 +524,7 @@ mod tests {
                 password: "password".into(),
                 description: " ".into(),
                 metadata: "{}".into(),
+                role: Some(UserRole::Student),
             };
 
             let db = MockDatabase::new(DatabaseBackend::Postgres);
@@ -541,6 +547,7 @@ mod tests {
                 password: "password".into(),
                 description: " ".into(),
                 metadata: "{}".into(),
+                role: Some(UserRole::Student),
             };
 
             let db = MockDatabase::new(DatabaseBackend::Postgres);
@@ -563,7 +570,7 @@ mod tests {
         use crate::services::user::{UserService, utils::*};
         use sea_orm::{DatabaseBackend, MockDatabase};
 
-        use entity::user::Model as UserModel;
+        use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
 
         #[tokio::test]
         pub async fn success() {
@@ -581,6 +588,7 @@ mod tests {
                 description: description.clone(),
                 user_id: 1,
                 metadata: "{}".into(),
+                role: Some(UserRole::Student),
             }]]);
 
             let user =

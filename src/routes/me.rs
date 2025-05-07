@@ -70,7 +70,7 @@ mod tests {
         use tower::ServiceExt;
 
         use axum::{Router, body::Body, http::StatusCode, routing::get};
-        use entity::user::Model as UserModel;
+        use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
 
         use crate::{
             app::state::AppState, routes::me::me_get_handler, services::user::MockUserService,
@@ -91,6 +91,7 @@ mod tests {
                     password: "password".into(),
                     description: " ".into(),
                     metadata: "{}".into(),
+                    role: Some(UserRole::Student),
                 }))
             });
 

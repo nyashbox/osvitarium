@@ -13,6 +13,9 @@ pub enum AppStatus {
     /// The request doesn't have valid authentication credentials
     Unauthenticated(Option<String>),
 
+    /// Requested entity was not found
+    NotFound(Option<String>),
+
     /// Operation is not implemented
     Unimplemented(),
 
@@ -53,8 +56,25 @@ impl IntoResponse for AppStatus {
                         .into_response()
                 }
             }
+
             AppStatus::Ok(msg) => {
                 (StatusCode::OK, Json(json!({"code": 200, "msg": msg}))).into_response()
+            }
+
+            AppStatus::NotFound(msg) => {
+                if let Some(msg) = msg {
+                    (
+                        StatusCode::NOT_FOUND,
+                        Json(json!({"code": 404, "msg": msg})),
+                    )
+                        .into_response()
+                } else {
+                    (
+                        StatusCode::NOT_FOUND,
+                        Json(json!({"code": 404, "msg": "Requested entity was not found!"})),
+                    )
+                        .into_response()
+                }
             }
 
             AppStatus::Unimplemented() => (
