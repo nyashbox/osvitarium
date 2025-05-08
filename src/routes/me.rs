@@ -1,24 +1,10 @@
-use crate::{
-    app::{state::AppState, status::AppStatus as Status},
-    repositories::user::User,
-    services::user::JWTClaims,
-};
-
-use crate::repositories::user::UserRepository;
-
-use axum::{Json, extract::State};
+use crate::{app::status::AppStatus as Status, repositories::user::User};
 
 use sea_orm::prelude::Json as SeaJson;
 
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
+use axum::{Json, extract::Extension};
 
-use axum_extra::{
-    TypedHeader,
-    headers::{Authorization, authorization::Bearer},
-};
 use serde::Serialize;
-
-use std::sync::Arc;
 
 #[derive(Serialize)]
 pub struct Response {
@@ -31,30 +17,29 @@ pub struct Response {
     metadata: SeaJson,
 }
 
-pub async fn me_get_handler<S>(
-    State(state): State<Arc<AppState<S>>>,
-    TypedHeader(Authorization(bearer)): TypedHeader<Authorization<Bearer>>,
-) -> Result<Json<Response>, Status>
-where
-    S: UserRepository,
-{
-    let token = decode::<JWTClaims>(
-        bearer.token(),
-        &DecodingKey::from_secret(state.secret.as_bytes()),
-        &Validation::new(Algorithm::HS256),
-    )
-    .map_err(|e| {
-        log::error!("Error while decoding JWT token: {e}");
+pub async fn me_get_handler(Extension(user): Extension<User>) -> Result<Json<Response>, Status> {
+    let user_role: String;
+    let user_aux_sub: i32;
 
-        Status::Internal(None)
-    })?
-    .claims;
-
-    let user = state.db.find_by_id(token.sub).await?;
     let user = match user {
-        User::Student(model, _) => model,
-        User::Teacher(model, _) => model,
-        User::Principal(model, _) => model,
+        User::Student(model, student) => {
+            user_aux_sub = student.student_id;
+            user_role = "student".into();
+
+            model
+        }
+        User::Teacher(model, teacher) => {
+            user_aux_sub = teacher.teacher_id;
+            user_role = "teacher".into();
+
+            model
+        }
+        User::Principal(model, principal) => {
+            user_aux_sub = principal.principal_id;
+            user_role = "principal".into();
+
+            model
+        }
     };
 
     Ok(Json(Response {
@@ -62,8 +47,8 @@ where
         username: user.username,
         fullname: user.fullname,
         description: user.description,
-        role: token.role,
-        role_id: token.aux_sub,
+        role: user_role,
+        role_id: user_aux_sub,
         metadata: user.metadata,
     }))
 }
@@ -83,6 +68,7 @@ mod tests {
 
         use crate::{
             app::state::AppState,
+            middleware::auth::auth_middleware,
             repositories::user::{MockUserRepository, User},
             routes::me::me_get_handler,
         };
@@ -112,13 +98,14 @@ mod tests {
                 ))
             });
 
-            let router: Router =
-                Router::new()
-                    .route("/me", get(me_get_handler))
-                    .with_state(Arc::new(AppState {
-                        db: mock,
-                        secret: "secret".into(),
-                    }));
+            let state = Arc::new(AppState {
+                db: mock,
+                secret: "secret".into(),
+            });
+
+            let router: Router = Router::new()
+                .route("/me", get(me_get_handler))
+                .layer(axum::middleware::from_fn_with_state(state, auth_middleware));
 
             let request = Request::builder()
                 .uri("/me")

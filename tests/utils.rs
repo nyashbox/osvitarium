@@ -1,10 +1,8 @@
 use osvitarium_backend::app::state::AppState;
 
-use sea_orm::{ActiveModelTrait, Database, DatabaseConnection, EntityTrait, Set};
+use sea_orm::{Database, DatabaseConnection, EntityTrait};
 
 use migration::{Migrator, MigratorTrait};
-
-use osvitarium_backend::services::utils;
 
 /// Build application state for the integration testing
 ///

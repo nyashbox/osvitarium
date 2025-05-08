@@ -15,6 +15,7 @@ use log::error;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set};
 
 /// Represents user
+#[derive(Clone)]
 pub enum User {
     /// Student
     Student(UserModel, StudentModel),
