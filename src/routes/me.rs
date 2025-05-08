@@ -1,7 +1,7 @@
 use crate::{
-    app::{error::AppStatus as Status, state::AppState},
+    app::{state::AppState, status::AppStatus as Status},
     repositories::user::User,
-    services::user::{JWTClaims, UserService},
+    services::user::JWTClaims,
 };
 
 use crate::repositories::user::UserRepository;

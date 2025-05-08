@@ -1,4 +1,4 @@
-use crate::{app::error::AppStatus as Status, services::user::utils};
+use crate::{app::status::AppStatus as Status, services::utils};
 
 use entity::{
     principal::{
@@ -13,18 +13,6 @@ use entity::{
 use log::error;
 
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set};
-
-/// Represents user role
-pub enum Role {
-    /// Student role
-    Student,
-
-    /// Teacher role
-    Teacher,
-
-    /// Principal role
-    Principal,
-}
 
 /// Represents user
 pub enum User {
@@ -256,7 +244,7 @@ mod tests {
             user::Model as UserModel,
         };
 
-        use crate::repositories::user::{Role, UserRepository};
+        use crate::repositories::user::UserRepository;
 
         #[tokio::test]
         pub async fn success() {

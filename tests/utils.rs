@@ -4,7 +4,7 @@ use sea_orm::{ActiveModelTrait, Database, DatabaseConnection, EntityTrait, Set};
 
 use migration::{Migrator, MigratorTrait};
 
-use osvitarium_backend::services::user::utils;
+use osvitarium_backend::services::utils;
 
 /// Build application state for the integration testing
 ///
@@ -59,40 +59,4 @@ pub async fn empty_database(db: &DatabaseConnection) {
         .exec(db)
         .await
         .unwrap();
-}
-
-/// Insert new student into the database
-///
-/// # Arguments
-///
-/// * 'username' - student username
-/// * 'password' - user password
-///
-/// # Returns
-///
-/// Inserted model
-pub async fn insert_student(
-    db: &DatabaseConnection,
-    username: &str,
-    password: &str,
-) -> entity::student::Model {
-    let user = entity::user::ActiveModel {
-        username: Set(username.to_string()),
-        password: Set(utils::hash_password(password).unwrap()),
-        fullname: Set("".to_string()),
-        description: Set("".to_string()),
-        metadata: Set("{}".into()),
-        ..Default::default()
-    }
-    .insert(db)
-    .await
-    .unwrap();
-
-    entity::student::ActiveModel {
-        user_id: Set(user.user_id),
-        ..Default::default()
-    }
-    .insert(db)
-    .await
-    .unwrap()
 }

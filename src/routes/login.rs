@@ -1,5 +1,5 @@
 use crate::{
-    app::{error::AppStatus as Status, state::AppState},
+    app::{state::AppState, status::AppStatus as Status},
     repositories::user::UserRepository,
     services::user::UserService,
 };
@@ -78,10 +78,10 @@ mod tests {
         };
 
         use crate::{
-            app::{error::AppStatus as Status, state::AppState},
+            app::state::AppState,
             repositories::user::{MockUserRepository, User},
             routes::login::{Request, login_post_handler},
-            services::user::{MockUserService, utils},
+            services::utils,
         };
 
         use entity::student::Model as StudentModel;
