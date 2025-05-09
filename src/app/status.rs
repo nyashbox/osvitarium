@@ -23,6 +23,12 @@ pub enum AppStatus {
 
     /// Internal error
     Internal(Option<String>),
+
+    /// Entity already exists
+    AlreadyExists(Option<String>),
+
+    /// The client specified an invalid/malformed argument
+    InvalidArgument(Option<String>),
 }
 
 impl IntoResponse for AppStatus {
@@ -84,6 +90,34 @@ impl IntoResponse for AppStatus {
                 Json(json!({"code": 501, "msg": "Not Implemented!"})),
             )
                 .into_response(),
+
+            AppStatus::AlreadyExists(msg) => {
+                if let Some(msg) = msg {
+                    (StatusCode::CONFLICT, Json(json!({"code": 409, "msg": msg}))).into_response()
+                } else {
+                    (
+                        StatusCode::CONFLICT,
+                        Json(json!({"code": 409, "msg": "Entity alredy exists!"})),
+                    )
+                        .into_response()
+                }
+            }
+
+            AppStatus::InvalidArgument(msg) => {
+                if let Some(msg) = msg {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"code": 400, "msg": msg})),
+                    )
+                        .into_response()
+                } else {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"code": 400, "msg": "Invalid argument was specified!"})),
+                    )
+                        .into_response()
+                }
+            }
         }
     }
 }

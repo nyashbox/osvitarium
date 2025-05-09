@@ -1,5 +1,6 @@
 pub mod login;
 pub mod me;
+pub mod signup;
 
 use std::sync::Arc;
 
@@ -24,6 +25,7 @@ where
 {
     Router::new()
         .route("/login", routing::post(login::login_post_handler))
+        .route("/signup", routing::post(signup::signup_post_handler))
         .route(
             "/me",
             routing::get(me::me_get_handler).layer(middleware::from_fn_with_state(
