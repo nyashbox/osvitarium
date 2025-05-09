@@ -7,17 +7,12 @@ use osvitarium_backend::repositories::user::UserRepository;
 use osvitarium_backend::routes::build_routes;
 use osvitarium_backend::routes::signup::Request;
 
-use axum::{
-    body::Body,
-    http::{Request as AxumRequest, StatusCode},
-};
-
-use tower::ServiceExt;
+use axum::http::StatusCode;
 
 use rstest::rstest;
 
 #[rstest]
-#[case::success("username", "Student", StatusCode::OK)]
+#[case::success("success", "Student", StatusCode::OK)]
 #[case::exists("exists", "Student", StatusCode::CONFLICT)]
 #[tokio::test]
 async fn singup_post_handler(
@@ -34,23 +29,14 @@ async fn singup_post_handler(
 
     let router = build_routes(state.clone());
 
-    let request = AxumRequest::builder()
-        .uri("/signup")
-        .method("POST")
-        .header("content-type", "application/json")
-        .body(Body::from(
-            serde_json::to_string(&Request {
-                username: username.into(),
-                password: "password".into(),
-                role: role.into(),
-            })
-            .unwrap(),
-        ))
-        .unwrap();
+    let response = request_post(router, "/signup", &Request {
+        username: username.into(),
+        password: "password".into(),
+        role: role.into(),
+    })
+    .await;
 
-    let res = router.oneshot(request).await.unwrap();
-
-    assert_eq!(res.status(), expected);
+    assert_eq!(response.status(), expected);
 
     empty_database(&state.db).await;
 }

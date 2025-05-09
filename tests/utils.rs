@@ -1,8 +1,16 @@
+use axum::{
+    Router,
+    body::Body,
+    http::{Request, Response},
+};
 use osvitarium_backend::app::state::AppState;
 
 use sea_orm::{Database, DatabaseConnection, EntityTrait};
 
 use migration::{Migrator, MigratorTrait};
+use serde::Serialize;
+
+use tower::ServiceExt;
 
 /// Build application state for the integration testing
 ///
@@ -57,4 +65,26 @@ pub async fn empty_database(db: &DatabaseConnection) {
         .exec(db)
         .await
         .unwrap();
+}
+
+pub async fn request_post(router: Router, uri: &str, body: &impl Serialize) -> Response<Body> {
+    let request = Request::builder()
+        .uri(uri)
+        .method("POST")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_string(body).unwrap()))
+        .unwrap();
+
+    router.oneshot(request).await.unwrap()
+}
+
+pub async fn request_get(router: Router, uri: &str, body: &impl Serialize) -> Response<Body> {
+    let request = Request::builder()
+        .uri(uri)
+        .method("GET")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_string(body).unwrap()))
+        .unwrap();
+
+    router.oneshot(request).await.unwrap()
 }

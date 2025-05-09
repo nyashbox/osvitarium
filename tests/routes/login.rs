@@ -7,11 +7,7 @@ use osvitarium_backend::repositories::user::UserRepository;
 use osvitarium_backend::routes::build_routes;
 use osvitarium_backend::routes::login::Request;
 
-use axum::{
-    body::Body,
-    http::{Request as AxumRequest, StatusCode},
-};
-use tower::ServiceExt;
+use axum::http::StatusCode;
 
 use rstest::rstest;
 
@@ -34,21 +30,12 @@ async fn login_post_test(
 
     let router = build_routes(state.clone());
 
-    let request = AxumRequest::builder()
-        .uri("/login")
-        .method("POST")
-        .header("content-type", "application/json")
-        .body(Body::from(
-            serde_json::to_string(&Request {
-                username: username.to_string(),
-                password: password.to_string(),
-            })
-            .unwrap(),
-        ))
-        .unwrap();
+    let response = request_post(router, "/login", &Request {
+        username: username.to_string(),
+        password: password.to_string(),
+    })
+    .await;
 
-    let res = router.oneshot(request).await.unwrap();
-
-    assert_eq!(res.status(), expected);
+    assert_eq!(response.status(), expected);
     empty_database(&state.db).await;
 }
