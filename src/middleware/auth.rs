@@ -72,23 +72,27 @@ mod tests {
     #[tokio::test]
     pub async fn auth_middleware_test(#[case] token: String, #[case] expected: StatusCode) {
         let mut mock = MockUserRepository::new();
-        mock.expect_find_by_id().return_once(|id| match id {
-            1 => Ok(User::Student(
-                entity::user::Model {
-                    user_id: 1,
-                    username: "johndoe".into(),
-                    fullname: "John Doe".into(),
-                    password: "".into(),
-                    description: " ".into(),
-                    metadata: "{}".into(),
-                    role: Some(UserRole::Student),
-                },
-                entity::student::Model {
-                    user_id: 1,
-                    student_id: 1,
-                },
-            )),
-            _ => Err(Status::NotFound(None)),
+        mock.expect_find_by_id().return_once(|id| {
+            Box::pin(async move {
+                match id {
+                    1 => Ok(User::Student(
+                        entity::user::Model {
+                            user_id: 1,
+                            username: "johndoe".into(),
+                            fullname: "John Doe".into(),
+                            password: "".into(),
+                            description: " ".into(),
+                            metadata: "{}".into(),
+                            role: Some(UserRole::Student),
+                        },
+                        entity::student::Model {
+                            user_id: 1,
+                            student_id: 1,
+                        },
+                    )),
+                    _ => Err(Status::NotFound(None)),
+                }
+            })
         });
 
         let router: Router = Router::new().route("/", get(|| async { "OK" })).layer(

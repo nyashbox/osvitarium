@@ -13,4 +13,12 @@ pub struct AppConfig {
     /// Path to the configuration storage
     #[arg(long, default_value = "/etc/osvitarium.conf")]
     pub config: String,
+
+    /// Database connection URL
+    #[arg(short, long, env = "OSVITARIUM_DATABASE_URL")]
+    pub db: String,
+
+    /// Application secret
+    #[arg(short, long, env = "OSVITARIUM_SECRET")]
+    pub secret: String,
 }

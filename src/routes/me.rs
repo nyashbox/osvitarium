@@ -60,7 +60,7 @@ mod tests {
 
         use tower::ServiceExt;
 
-        use axum::{Router, body::Body, http::StatusCode, routing::get};
+        use axum::{body::Body, http::StatusCode};
         use entity::{
             sea_orm_active_enums::UserRole, student::Model as StudentModel,
             user::Model as UserModel,
@@ -68,9 +68,8 @@ mod tests {
 
         use crate::{
             app::state::AppState,
-            middleware::auth::auth_middleware,
             repositories::user::{MockUserRepository, User},
-            routes::me::me_get_handler,
+            routes::build_routes,
         };
 
         use axum::http::Request;
@@ -81,31 +80,29 @@ mod tests {
             let auth_header = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXhfc3ViIjoxLCJzdWIiOjEsImlhdCI6MTExMTExMTExMTEsImV4cCI6OTk5OTk5OTk5OTksInJvbGUiOiJzdHVkZW50In0.zOIV8xbN1eIM_n7AciKbuTkpgKbCHK6Kf1vFMgv3SKY";
 
             mock.expect_find_by_id().returning(move |_| {
-                Ok(User::Student(
-                    UserModel {
-                        user_id: 1,
-                        username: "johndoe".into(),
-                        fullname: "John Doe".into(),
-                        password: "password".into(),
-                        description: " ".into(),
-                        metadata: "{}".into(),
-                        role: Some(UserRole::Student),
-                    },
-                    StudentModel {
-                        user_id: 1,
-                        student_id: 1,
-                    },
-                ))
+                Box::pin(async move {
+                    Ok(User::Student(
+                        UserModel {
+                            user_id: 1,
+                            username: "johndoe".into(),
+                            fullname: "John Doe".into(),
+                            password: "password".into(),
+                            description: " ".into(),
+                            metadata: "{}".into(),
+                            role: Some(UserRole::Student),
+                        },
+                        StudentModel {
+                            user_id: 1,
+                            student_id: 1,
+                        },
+                    ))
+                })
             });
 
-            let state = Arc::new(AppState {
+            let router = build_routes(Arc::new(AppState {
                 db: mock,
                 secret: "secret".into(),
-            });
-
-            let router: Router = Router::new()
-                .route("/me", get(me_get_handler))
-                .layer(axum::middleware::from_fn_with_state(state, auth_middleware));
+            }));
 
             let request = Request::builder()
                 .uri("/me")

@@ -71,16 +71,14 @@ where
 mod tests {
     mod login_post_handler {
         use axum::{
-            Router,
             body::Body,
             http::{Request as AxumRequest, StatusCode},
-            routing::post,
         };
 
         use crate::{
             app::state::AppState,
             repositories::user::{MockUserRepository, User},
-            routes::login::{Request, login_post_handler},
+            routes::{build_routes, login::Request},
             services::utils,
         };
 
@@ -96,30 +94,30 @@ mod tests {
         async fn success() {
             let mut mock = MockUserRepository::new();
 
-            mock.expect_find_by_username().return_once(move |_| {
-                Ok(User::Student(
-                    UserModel {
-                        user_id: 1,
-                        username: "johndoe".into(),
-                        fullname: "John Doe".into(),
-                        password: utils::hash_password("password").unwrap(),
-                        description: " ".into(),
-                        metadata: "{}".into(),
-                        role: Some(UserRole::Student),
-                    },
-                    StudentModel {
-                        user_id: 1,
-                        student_id: 1,
-                    },
-                ))
+            mock.expect_find_by_username().return_once(|_| {
+                Box::pin(async move {
+                    Ok(User::Student(
+                        UserModel {
+                            user_id: 1,
+                            username: "johndoe".into(),
+                            fullname: "John Doe".into(),
+                            password: utils::hash_password("password").unwrap(),
+                            description: " ".into(),
+                            metadata: "{}".into(),
+                            role: Some(UserRole::Student),
+                        },
+                        StudentModel {
+                            user_id: 1,
+                            student_id: 1,
+                        },
+                    ))
+                })
             });
 
-            let router: Router = Router::new()
-                .route("/login", post(login_post_handler))
-                .with_state(Arc::new(AppState {
-                    db: mock,
-                    secret: "secret".into(),
-                }));
+            let router = build_routes(Arc::new(AppState {
+                db: mock,
+                secret: "secret".into(),
+            }));
 
             let request = AxumRequest::builder()
                 .uri("/login")
@@ -148,29 +146,29 @@ mod tests {
             let mut mock = MockUserRepository::new();
 
             mock.expect_find_by_username().return_once(move |_| {
-                Ok(User::Student(
-                    UserModel {
-                        user_id: 1,
-                        username: "username".into(),
-                        fullname: "John Doe".into(),
-                        password: utils::hash_password("wrong").unwrap(),
-                        description: " ".into(),
-                        metadata: "{}".into(),
-                        role: Some(UserRole::Student),
-                    },
-                    StudentModel {
-                        user_id: 1,
-                        student_id: 1,
-                    },
-                ))
+                Box::pin(async move {
+                    Ok(User::Student(
+                        UserModel {
+                            user_id: 1,
+                            username: "username".into(),
+                            fullname: "John Doe".into(),
+                            password: utils::hash_password("wrong").unwrap(),
+                            description: " ".into(),
+                            metadata: "{}".into(),
+                            role: Some(UserRole::Student),
+                        },
+                        StudentModel {
+                            user_id: 1,
+                            student_id: 1,
+                        },
+                    ))
+                })
             });
 
-            let router: Router = Router::new()
-                .route("/login", post(login_post_handler))
-                .with_state(Arc::new(AppState {
-                    db: mock,
-                    secret: "secret".into(),
-                }));
+            let router = build_routes(Arc::new(AppState {
+                db: mock,
+                secret: "secret".into(),
+            }));
 
             let request = AxumRequest::builder()
                 .uri("/login")

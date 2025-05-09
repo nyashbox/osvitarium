@@ -28,7 +28,6 @@ pub enum User {
 }
 
 #[mockall::automock]
-#[allow(async_fn_in_trait)]
 pub trait UserRepository {
     /// Create new user in the storage
     ///
@@ -42,7 +41,12 @@ pub trait UserRepository {
     ///
     /// On success: User
     /// On failure: Application status
-    async fn create(&self, username: &str, password: &str, role: UserRole) -> Result<User, Status>;
+    fn create(
+        &self,
+        username: &str,
+        password: &str,
+        role: UserRole,
+    ) -> impl std::future::Future<Output = Result<User, Status>> + Send;
 
     /// Find user by ID
     ///
@@ -54,7 +58,8 @@ pub trait UserRepository {
     ///
     /// On success: User
     /// On failure: Application status
-    async fn find_by_id(&self, id: i32) -> Result<User, Status>;
+    fn find_by_id(&self, id: i32)
+    -> impl std::future::Future<Output = Result<User, Status>> + Send;
 
     /// Find user by username
     ///
@@ -66,7 +71,10 @@ pub trait UserRepository {
     ///
     /// On success: User
     /// On failure: Application status
-    async fn find_by_username(&self, username: &str) -> Result<User, Status>;
+    fn find_by_username(
+        &self,
+        username: &str,
+    ) -> impl std::future::Future<Output = Result<User, Status>> + Send;
 }
 
 impl UserRepository for sea_orm::DatabaseConnection {
