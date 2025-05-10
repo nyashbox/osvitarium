@@ -20,16 +20,16 @@ pub struct Request {
 }
 
 /// Authentication response
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Response {
     /// Authentication token
-    access_token: String,
+    pub access_token: String,
 
     /// Token type
-    token_type: String,
+    pub token_type: String,
 
     /// Token TTL (in seconds)
-    expires_in: u64,
+    pub expires_in: u64,
 }
 
 pub async fn login_post_handler<S>(
@@ -71,14 +71,16 @@ where
 mod tests {
     mod login_post_handler {
         use axum::{
+            Router,
             body::Body,
             http::{Request as AxumRequest, StatusCode},
+            routing::{self},
         };
 
         use crate::{
             app::state::AppState,
             repositories::user::{MockUserRepository, User},
-            routes::{build_routes, login::Request},
+            routes::login::{Request, login_post_handler},
             services::utils,
         };
 
@@ -114,10 +116,12 @@ mod tests {
                 })
             });
 
-            let router = build_routes(Arc::new(AppState {
-                db: mock,
-                secret: "secret".into(),
-            }));
+            let router = Router::new()
+                .route("/login", routing::post(login_post_handler))
+                .with_state(Arc::new(AppState {
+                    db: mock,
+                    secret: "secret".into(),
+                }));
 
             let request = AxumRequest::builder()
                 .uri("/login")
@@ -165,10 +169,12 @@ mod tests {
                 })
             });
 
-            let router = build_routes(Arc::new(AppState {
-                db: mock,
-                secret: "secret".into(),
-            }));
+            let router = Router::new()
+                .route("/login", routing::post(login_post_handler))
+                .with_state(Arc::new(AppState {
+                    db: mock,
+                    secret: "secret".into(),
+                }));
 
             let request = AxumRequest::builder()
                 .uri("/login")

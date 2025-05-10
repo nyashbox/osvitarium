@@ -60,7 +60,7 @@ mod tests {
 
         use tower::ServiceExt;
 
-        use axum::{body::Body, http::StatusCode};
+        use axum::{Router, body::Body, http::StatusCode, middleware, routing};
         use entity::{
             sea_orm_active_enums::UserRole, student::Model as StudentModel,
             user::Model as UserModel,
@@ -68,8 +68,9 @@ mod tests {
 
         use crate::{
             app::state::AppState,
+            middleware::auth::auth_middleware,
             repositories::user::{MockUserRepository, User},
-            routes::build_routes,
+            routes::me::me_get_handler,
         };
 
         use axum::http::Request;
@@ -99,10 +100,18 @@ mod tests {
                 })
             });
 
-            let router = build_routes(Arc::new(AppState {
-                db: mock,
-                secret: "secret".into(),
-            }));
+            let router = Router::new().route(
+                "/me",
+                routing::get(me_get_handler).layer(middleware::from_fn_with_state(
+                    Arc::new({
+                        AppState {
+                            db: mock,
+                            secret: "secret".into(),
+                        }
+                    }),
+                    auth_middleware,
+                )),
+            );
 
             let request = Request::builder()
                 .uri("/me")

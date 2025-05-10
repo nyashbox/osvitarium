@@ -26,3 +26,5 @@ tower = "0.5.2"
 
 [dev-dependencies]
 rstest = "0.25.0"
+serial_test = "*"
+

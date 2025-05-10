@@ -1,8 +1,10 @@
 use crate::app::status::AppStatus as Status;
 
-use entity::course::{ActiveModel as ActiveCourseModel, Model as CourseModel};
+use entity::course::{
+    ActiveModel as ActiveCourseModel, Entity as CourseEntity, Model as CourseModel,
+};
 
-use sea_orm::ActiveModelTrait;
+use sea_orm::{ActiveModelTrait, EntityTrait};
 
 use log::error;
 
@@ -22,6 +24,18 @@ pub trait CourseRepository {
         &self,
         title: &str,
     ) -> impl std::future::Future<Output = Result<Course, Status>> + Send;
+
+    /// Find all courses
+    ///
+    /// # Arguments
+    ///
+    /// This function takes no arguments
+    ///
+    /// # Returns
+    ///
+    /// On success: Vector containing all courses
+    /// On failure: Application status
+    fn find_all(&self) -> impl std::future::Future<Output = Result<Vec<Course>, Status>> + Send;
 }
 
 /// Represents course
@@ -47,5 +61,15 @@ impl CourseRepository for sea_orm::DatabaseConnection {
         Ok(Course {
             model: course_model,
         })
+    }
+
+    async fn find_all(&self) -> Result<Vec<Course>, Status> {
+        let courses = CourseEntity::find().all(self).await.map_err(|e| {
+            error!("Failed to get all courses from the database: {e}");
+
+            Status::Internal(None)
+        })?;
+
+        Ok(courses.into_iter().map(|model| Course { model }).collect())
     }
 }

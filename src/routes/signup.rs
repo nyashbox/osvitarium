@@ -58,18 +58,20 @@ mod tests {
     use rstest::rstest;
 
     use axum::{
+        Router,
         body::Body,
         http::{Request as AxumRequest, StatusCode},
+        routing::{self},
     };
     use tower::ServiceExt;
 
-    use crate::app::state::AppState;
     use crate::app::status::AppStatus as Status;
+    use crate::{app::state::AppState, routes::signup::signup_post_handler};
 
     use crate::repositories::user::MockUserRepository;
     use crate::repositories::user::User;
 
-    use crate::routes::build_routes;
+    
     use crate::services::utils;
 
     use entity::student::Model as StudentModel;
@@ -134,10 +136,12 @@ mod tests {
             })
         });
 
-        let router = build_routes(Arc::new(AppState {
-            db: mock,
-            secret: "secret".into(),
-        }));
+        let router = Router::new()
+            .route("/signup", routing::post(signup_post_handler))
+            .with_state(Arc::new(AppState {
+                db: mock,
+                secret: "secret".into(),
+            }));
 
         let request = AxumRequest::builder()
             .uri("/signup")
