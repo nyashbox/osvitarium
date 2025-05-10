@@ -51,7 +51,8 @@ where
 mod tests {
     use super::*;
 
-    use crate::repositories::user::{MockUserRepository, User};
+    use crate::models::user::User;
+    use crate::repositories::user::MockUserRepository;
 
     use jsonwebtoken::{EncodingKey, Header};
     use rstest::rstest;

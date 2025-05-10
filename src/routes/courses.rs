@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use crate::app::state::AppState;
-use crate::repositories::user::User;
+use crate::models::user::User;
 use crate::{app::status::AppStatus as Status, repositories::course::CourseRepository};
+
+use crate::models::course::CourseRepresentation as CourseGetResponse;
 
 use axum::extract::State;
 use axum::{Extension, response::Json};
@@ -21,22 +23,14 @@ pub struct CourseJson {
 pub async fn courses_get_handler<S>(
     Extension(_user): Extension<User>,
     State(state): State<Arc<AppState<S>>>,
-) -> Result<Json<Vec<CourseJson>>, Status>
+) -> Result<Json<Vec<CourseGetResponse>>, Status>
 where
     S: CourseRepository,
 {
     let courses = state.db.find_all().await?;
 
-    let response: Vec<CourseJson> = courses
-        .into_iter()
-        .map(|course| CourseJson {
-            course_id: course.model.course_id,
-            title: course.model.title,
-            description: course.model.description,
-            is_active: course.model.is_active,
-            created_at: course.model.created_at.to_string(),
-        })
-        .collect();
+    let response: Vec<CourseGetResponse> =
+        courses.into_iter().map(|course| course.into()).collect();
 
     Ok(Json(response))
 }

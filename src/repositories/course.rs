@@ -1,8 +1,8 @@
 use crate::app::status::AppStatus as Status;
 
-use entity::course::{
-    ActiveModel as ActiveCourseModel, Entity as CourseEntity, Model as CourseModel,
-};
+use crate::models::Course;
+
+use entity::course::{ActiveModel as ActiveCourseModel, Entity as CourseEntity};
 
 use sea_orm::{ActiveModelTrait, EntityTrait};
 
@@ -36,12 +36,6 @@ pub trait CourseRepository {
     /// On success: Vector containing all courses
     /// On failure: Application status
     fn find_all(&self) -> impl std::future::Future<Output = Result<Vec<Course>, Status>> + Send;
-}
-
-/// Represents course
-pub struct Course {
-    /// Course model
-    pub model: CourseModel,
 }
 
 impl CourseRepository for sea_orm::DatabaseConnection {

@@ -1,31 +1,18 @@
 use crate::{app::status::AppStatus as Status, services::utils};
 
 use entity::{
-    principal::{
-        ActiveModel as ActivePrincipalModel, Entity as PrincipalEntity, Model as PrincipalModel,
-    },
+    principal::{ActiveModel as ActivePrincipalModel, Entity as PrincipalEntity},
     sea_orm_active_enums::UserRole,
-    student::{ActiveModel as ActiveStudentModel, Entity as StudentEntity, Model as StudentModel},
-    teacher::{ActiveModel as ActiveTeacherModel, Entity as TeacherEntity, Model as TeacherModel},
-    user::{self, ActiveModel as ActiveUserModel, Entity as UserEntity, Model as UserModel},
+    student::{ActiveModel as ActiveStudentModel, Entity as StudentEntity},
+    teacher::{ActiveModel as ActiveTeacherModel, Entity as TeacherEntity},
+    user::{self, ActiveModel as ActiveUserModel, Entity as UserEntity},
 };
+
+use crate::models::user::User;
 
 use log::error;
 
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set};
-
-/// Represents user
-#[derive(Clone)]
-pub enum User {
-    /// Student
-    Student(UserModel, StudentModel),
-
-    /// Teacher
-    Teacher(UserModel, TeacherModel),
-
-    /// Principal
-    Principal(UserModel, PrincipalModel),
-}
 
 #[mockall::automock]
 pub trait UserRepository {

@@ -79,7 +79,8 @@ mod tests {
 
         use crate::{
             app::state::AppState,
-            repositories::user::{MockUserRepository, User},
+            models::user::User,
+            repositories::user::MockUserRepository,
             routes::login::{Request, login_post_handler},
             services::utils,
         };

@@ -2,7 +2,7 @@ use crate::{app::status::AppStatus as Status, services::utils};
 
 use jsonwebtoken::{EncodingKey, Header, encode};
 
-use crate::repositories::user::User;
+use crate::models::user::User;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 

@@ -1,56 +1,11 @@
-use crate::{app::status::AppStatus as Status, repositories::user::User};
+use crate::{app::status::AppStatus as Status, models::user::User};
 
-use sea_orm::prelude::Json as SeaJson;
+use crate::models::user::UserRepresentation as Response;
 
 use axum::{Json, extract::Extension};
 
-use serde::Serialize;
-
-#[derive(Serialize)]
-pub struct Response {
-    user_id: i32,
-    username: String,
-    fullname: String,
-    description: String,
-    role: String,
-    role_id: i32,
-    metadata: SeaJson,
-}
-
 pub async fn me_get_handler(Extension(user): Extension<User>) -> Result<Json<Response>, Status> {
-    let user_role: String;
-    let user_aux_sub: i32;
-
-    let user = match user {
-        User::Student(model, student) => {
-            user_aux_sub = student.student_id;
-            user_role = "student".into();
-
-            model
-        }
-        User::Teacher(model, teacher) => {
-            user_aux_sub = teacher.teacher_id;
-            user_role = "teacher".into();
-
-            model
-        }
-        User::Principal(model, principal) => {
-            user_aux_sub = principal.principal_id;
-            user_role = "principal".into();
-
-            model
-        }
-    };
-
-    Ok(Json(Response {
-        user_id: user.user_id,
-        username: user.username,
-        fullname: user.fullname,
-        description: user.description,
-        role: user_role,
-        role_id: user_aux_sub,
-        metadata: user.metadata,
-    }))
+    Ok(Json(user.into()))
 }
 
 #[cfg(test)]
@@ -67,10 +22,8 @@ mod tests {
         };
 
         use crate::{
-            app::state::AppState,
-            middleware::auth::auth_middleware,
-            repositories::user::{MockUserRepository, User},
-            routes::me::me_get_handler,
+            app::state::AppState, middleware::auth::auth_middleware, models::user::User,
+            repositories::user::MockUserRepository, routes::me::me_get_handler,
         };
 
         use axum::http::Request;

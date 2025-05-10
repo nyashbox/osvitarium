@@ -68,10 +68,9 @@ mod tests {
     use crate::app::status::AppStatus as Status;
     use crate::{app::state::AppState, routes::signup::signup_post_handler};
 
+    use crate::models::user::User;
     use crate::repositories::user::MockUserRepository;
-    use crate::repositories::user::User;
 
-    
     use crate::services::utils;
 
     use entity::student::Model as StudentModel;
