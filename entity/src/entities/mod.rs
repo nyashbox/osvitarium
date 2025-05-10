@@ -2,6 +2,9 @@
 
 pub mod prelude;
 
+pub mod course;
+pub mod course_instructor;
+pub mod course_student;
 pub mod principal;
 pub mod sea_orm_active_enums;
 pub mod student;

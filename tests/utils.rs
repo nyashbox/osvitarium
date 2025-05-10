@@ -65,6 +65,21 @@ pub async fn empty_database(db: &DatabaseConnection) {
         .exec(db)
         .await
         .unwrap();
+
+    entity::course::Entity::delete_many()
+        .exec(db)
+        .await
+        .unwrap();
+
+    entity::course_instructor::Entity::delete_many()
+        .exec(db)
+        .await
+        .unwrap();
+
+    entity::course_student::Entity::delete_many()
+        .exec(db)
+        .await
+        .unwrap();
 }
 
 pub async fn request_post(router: Router, uri: &str, body: &impl Serialize) -> Response<Body> {
