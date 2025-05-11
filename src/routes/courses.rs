@@ -78,7 +78,7 @@ pub mod post {
             http::{Request as AxumRequest, StatusCode},
             routing,
         };
-        use sea_orm::{prelude::DateTime, sqlx::types::chrono};
+        use sea_orm::sqlx::types::chrono;
         use tower::ServiceExt;
 
         use crate::{
