@@ -36,6 +36,21 @@ pub trait CourseRepository {
     /// On success: Vector containing all courses
     /// On failure: Application status
     fn find_all(&self) -> impl std::future::Future<Output = Result<Vec<Course>, Status>> + Send;
+
+    /// Find course by ID
+    ///
+    /// # Arguments
+    ///
+    /// * 'id' - course identifier (ID)
+    ///
+    /// # Returns
+    ///
+    /// On success: Course with specified ID
+    /// On failure: Application status
+    fn find_by_id(
+        &self,
+        id: i32,
+    ) -> impl std::future::Future<Output = Result<Course, Status>> + Send;
 }
 
 impl CourseRepository for sea_orm::DatabaseConnection {
@@ -72,5 +87,18 @@ impl CourseRepository for sea_orm::DatabaseConnection {
         })?;
 
         Ok(courses.into_iter().map(|model| Course { model }).collect())
+    }
+
+    async fn find_by_id(&self, id: i32) -> Result<Course, Status> {
+        let course = CourseEntity::find_by_id(id).one(self).await.map_err(|e| {
+            error!("Failed to find course by ID: {e}");
+
+            Status::Internal(None)
+        })?;
+
+        match course {
+            Some(model) => Ok(Course { model }),
+            None => Err(Status::NotFound(None)),
+        }
     }
 }

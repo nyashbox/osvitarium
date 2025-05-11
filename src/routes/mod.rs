@@ -29,12 +29,18 @@ where
         .route("/signup", routing::post(signup::signup_post_handler))
         .route(
             "/courses",
-            routing::get(courses::courses_get_handler)
+            routing::get(courses::get::courses_get_handler)
                 .post(courses::post::courses_post_handler)
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     auth_middleware,
                 )),
+        )
+        .route(
+            "/courses/{id}",
+            routing::get(courses::get::courses_get_one_handler).layer(
+                middleware::from_fn_with_state(state.clone(), auth_middleware),
+            ),
         )
         .route(
             "/me",

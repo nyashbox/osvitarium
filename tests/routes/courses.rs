@@ -67,3 +67,34 @@ pub async fn courses_post_test(
     assert_eq!(res.status(), expected);
     empty_database(&state.db).await;
 }
+
+#[rstest::rstest]
+#[case::success(1, StatusCode::OK)]
+#[case::bad_id(0, StatusCode::NOT_FOUND)]
+#[tokio::test]
+pub async fn courses_get_one_test(#[case] mut id: i32, #[case] expected: StatusCode) {
+    let state = Arc::new(build_app_state("secret").await);
+    empty_database(&state.db).await;
+
+    let router = build_routes(state.clone());
+
+    let _ = UserRepository::create(&state.db, "username", "password", Student).await;
+
+    let course = CourseRepository::create_course(&state.db, "exists")
+        .await
+        .unwrap();
+
+    if id > 0 {
+        id = course.model.course_id;
+    }
+
+    let request = TestBuilder::new(router)
+        .authenticate_as(Student)
+        .with_credentials("username", "password")
+        .route("GET", &format!("/courses/{id}"));
+
+    let res = request.run().await;
+
+    assert_eq!(res.status(), expected);
+    empty_database(&state.db).await;
+}
