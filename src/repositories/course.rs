@@ -4,7 +4,7 @@ use crate::models::Course;
 
 use entity::course::{ActiveModel as ActiveCourseModel, Entity as CourseEntity};
 
-use sea_orm::{ActiveModelTrait, EntityTrait};
+use sea_orm::{ActiveModelTrait, EntityTrait, SqlErr};
 
 use log::error;
 
@@ -47,9 +47,16 @@ impl CourseRepository for sea_orm::DatabaseConnection {
         .insert(self)
         .await
         .map_err(|e| {
-            error!("Failed to create new course: {e}");
+            if let Some(sql_error) = e.sql_err() {
+                match sql_error {
+                    SqlErr::UniqueConstraintViolation(_) => Status::AlreadyExists(None),
+                    _ => Status::Internal(None),
+                }
+            } else {
+                error!("Failed to create new course: {e}");
 
-            Status::Internal(None)
+                Status::Internal(None)
+            }
         })?;
 
         Ok(Course {
