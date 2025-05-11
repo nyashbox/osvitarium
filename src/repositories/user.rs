@@ -75,7 +75,7 @@ impl UserRepository for sea_orm::DatabaseConnection {
             password: Set(password),
             description: Set("".to_owned()),
             metadata: Set("{}".into()),
-            role: Set(Some(role.clone())),
+            role: Set(role.clone()),
 
             ..Default::default()
         }
@@ -153,62 +153,58 @@ impl UserRepository for sea_orm::DatabaseConnection {
                 "User with id '{id}' was not found!".to_string(),
             )))?;
 
-        if let Some(role) = &user.role {
-            match role {
-                UserRole::Student => {
-                    let model = user
-                        .find_related(StudentEntity)
-                        .one(self)
-                        .await
-                        .map_err(|e| {
-                            error!("Failed to find by ID: {e}");
+        match &user.role {
+            UserRole::Student => {
+                let model = user
+                    .find_related(StudentEntity)
+                    .one(self)
+                    .await
+                    .map_err(|e| {
+                        error!("Failed to find by ID: {e}");
 
-                            Status::Internal(None)
-                        })?;
+                        Status::Internal(None)
+                    })?;
 
-                    if let Some(student_model) = model {
-                        return Ok(User::Student(user, student_model));
-                    } else {
-                        return Err(Status::Internal(None));
-                    }
-                }
-                UserRole::Teacher => {
-                    let model = user
-                        .find_related(TeacherEntity)
-                        .one(self)
-                        .await
-                        .map_err(|e| {
-                            error!("Failed to find by ID: {e}");
-
-                            Status::Internal(None)
-                        })?;
-
-                    if let Some(teacher_model) = model {
-                        return Ok(User::Teacher(user, teacher_model));
-                    } else {
-                        return Err(Status::Internal(None));
-                    }
-                }
-                UserRole::Principal => {
-                    let model =
-                        user.find_related(PrincipalEntity)
-                            .one(self)
-                            .await
-                            .map_err(|e| {
-                                error!("Failed to find by ID: {e}");
-
-                                Status::Internal(None)
-                            })?;
-
-                    if let Some(principal_model) = model {
-                        return Ok(User::Principal(user, principal_model));
-                    } else {
-                        return Err(Status::Internal(None));
-                    }
+                if let Some(student_model) = model {
+                    return Ok(User::Student(user, student_model));
+                } else {
+                    return Err(Status::Internal(None));
                 }
             }
-        } else {
-            Err(Status::Internal(None))
+            UserRole::Teacher => {
+                let model = user
+                    .find_related(TeacherEntity)
+                    .one(self)
+                    .await
+                    .map_err(|e| {
+                        error!("Failed to find by ID: {e}");
+
+                        Status::Internal(None)
+                    })?;
+
+                if let Some(teacher_model) = model {
+                    return Ok(User::Teacher(user, teacher_model));
+                } else {
+                    return Err(Status::Internal(None));
+                }
+            }
+            UserRole::Principal => {
+                let model = user
+                    .find_related(PrincipalEntity)
+                    .one(self)
+                    .await
+                    .map_err(|e| {
+                        error!("Failed to find by ID: {e}");
+
+                        Status::Internal(None)
+                    })?;
+
+                if let Some(principal_model) = model {
+                    return Ok(User::Principal(user, principal_model));
+                } else {
+                    return Err(Status::Internal(None));
+                }
+            }
         }
     }
 
@@ -255,7 +251,7 @@ mod tests {
                         password: "".into(),
                         description: "".into(),
                         metadata: "{}".into(),
-                        role: Some(UserRole::Student),
+                        role: UserRole::Student,
                     }],
                 ])
                 .append_query_results([

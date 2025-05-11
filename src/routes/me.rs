@@ -43,7 +43,7 @@ mod tests {
                             password: "password".into(),
                             description: " ".into(),
                             metadata: "{}".into(),
-                            role: Some(UserRole::Student),
+                            role: UserRole::Student,
                         },
                         StudentModel {
                             user_id: 1,

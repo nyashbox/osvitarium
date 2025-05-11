@@ -107,7 +107,7 @@ mod tests {
                             password: utils::hash_password("password").unwrap(),
                             description: " ".into(),
                             metadata: "{}".into(),
-                            role: Some(UserRole::Student),
+                            role: UserRole::Student,
                         },
                         StudentModel {
                             user_id: 1,
@@ -160,7 +160,7 @@ mod tests {
                             password: utils::hash_password("wrong").unwrap(),
                             description: " ".into(),
                             metadata: "{}".into(),
-                            role: Some(UserRole::Student),
+                            role: UserRole::Student,
                         },
                         StudentModel {
                             user_id: 1,

@@ -84,7 +84,7 @@ mod tests {
                             password: "".into(),
                             description: " ".into(),
                             metadata: "{}".into(),
-                            role: Some(UserRole::Student),
+                            role: UserRole::Student,
                         },
                         entity::student::Model {
                             user_id: 1,

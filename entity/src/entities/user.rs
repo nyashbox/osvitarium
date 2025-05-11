@@ -13,7 +13,7 @@ pub struct Model {
     pub password: String,
     pub description: String,
     pub metadata: Json,
-    pub role: Option<UserRole>,
+    pub role: UserRole,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
