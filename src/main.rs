@@ -13,6 +13,9 @@ async fn main() {
     let app = AppBuilder::new()
         .secret(&config.secret)
         .db(&config.db)
+        .jitsi_app_id(&config.jitsi_app_id)
+        .jitsi_secret(&config.jitsi_secret)
+        .jitsi_kid(&config.jitsi_kid)
         .build()
         .await
         .unwrap();

@@ -55,11 +55,7 @@ pub trait UserService {
 
 impl UserService for User {
     fn authenticate(&self, password: &str) -> Result<(), Status> {
-        let user_model = match self {
-            User::Student(model, _) => model,
-            User::Teacher(model, _) => model,
-            User::Principal(model, _) => model,
-        };
+        let user_model = self.base_model_ref();
 
         if utils::verify_password(password, &user_model.password)? {
             Ok(())
@@ -79,25 +75,25 @@ impl UserService for User {
             .as_secs();
 
         let claims = match self {
-            User::Student(user, student) => JWTClaims {
+            User::Student(student) => JWTClaims {
                 exp: iat + ttl,
                 iat,
-                aux_sub: student.student_id,
-                sub: user.user_id,
+                aux_sub: student.student_model.student_id,
+                sub: student.user_model.user_id,
                 role: "student".into(),
             },
-            User::Teacher(user, teacher) => JWTClaims {
+            User::Teacher(teacher) => JWTClaims {
                 exp: iat + ttl,
                 iat,
-                aux_sub: teacher.teacher_id,
-                sub: user.user_id,
+                aux_sub: teacher.teacher_model.user_id,
+                sub: teacher.user_model.user_id,
                 role: "teacher".into(),
             },
-            User::Principal(user, principal) => JWTClaims {
+            User::Principal(principal) => JWTClaims {
                 exp: iat + ttl,
                 iat,
-                aux_sub: principal.principal_id,
-                sub: user.user_id,
+                aux_sub: principal.principal_model.user_id,
+                sub: principal.user_model.user_id,
                 role: "principal".into(),
             },
         };

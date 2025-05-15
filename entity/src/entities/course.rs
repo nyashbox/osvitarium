@@ -12,6 +12,7 @@ pub struct Model {
     pub description: Option<String>,
     pub is_active: bool,
     pub created_at: DateTime,
+    pub is_running_meeting: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

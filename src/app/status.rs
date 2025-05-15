@@ -21,6 +21,9 @@ pub enum AppStatus {
     /// Operation is not implemented
     Unimplemented(),
 
+    /// The caller doesn't have required permissions
+    PermissionDenied(Option<String>),
+
     /// Internal error
     Internal(Option<String>),
 
@@ -114,6 +117,22 @@ impl IntoResponse for AppStatus {
                     (
                         StatusCode::BAD_REQUEST,
                         Json(json!({"code": 400, "msg": "Invalid argument was specified!"})),
+                    )
+                        .into_response()
+                }
+            }
+
+            AppStatus::PermissionDenied(msg) => {
+                if let Some(msg) = msg {
+                    (
+                        StatusCode::FORBIDDEN,
+                        Json(json!({"code": 403, "msg": msg})),
+                    )
+                        .into_response()
+                } else {
+                    (
+                        StatusCode::FORBIDDEN,
+                        Json(json!({"code": 403, "msg": "Insufficient permissions!"})),
                     )
                         .into_response()
                 }

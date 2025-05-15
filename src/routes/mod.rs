@@ -1,6 +1,7 @@
 pub mod courses;
 pub mod login;
 pub mod me;
+pub mod meeting;
 pub mod signup;
 
 use std::sync::Arc;
@@ -41,6 +42,15 @@ where
             routing::get(courses::get::courses_get_one_handler).layer(
                 middleware::from_fn_with_state(state.clone(), auth_middleware),
             ),
+        )
+        .route(
+            "/courses/{id}/meeting",
+            routing::get(meeting::get::meeting_get)
+                .post(meeting::post::meeting_post_create)
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    auth_middleware,
+                )),
         )
         .route(
             "/me",

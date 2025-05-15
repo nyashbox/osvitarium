@@ -13,6 +13,15 @@ pub struct AppBuilder {
     secret: Option<String>,
     /// Database URL
     db_url: Option<String>,
+
+    /// Jitsi application ID
+    jitsi_app_id: Option<String>,
+
+    /// Jitsi application secret
+    jitsi_secret: Option<String>,
+
+    /// Jitsi key identifier (kid)
+    jitsi_kid: Option<String>,
 }
 
 impl AppBuilder {
@@ -29,6 +38,9 @@ impl AppBuilder {
         AppBuilder {
             secret: None,
             db_url: None,
+            jitsi_app_id: None,
+            jitsi_secret: None,
+            jitsi_kid: None,
         }
     }
 
@@ -62,6 +74,51 @@ impl AppBuilder {
         self
     }
 
+    /// Set Jitsi Meet application ID
+    ///
+    /// # Arguments
+    ///
+    /// * 'app_id' - Application ID
+    ///
+    /// # Returns
+    ///
+    /// This function returns self (ownership)
+    pub fn jitsi_app_id(mut self, app_id: &str) -> Self {
+        self.jitsi_app_id = Some(String::from(app_id));
+
+        self
+    }
+
+    /// Set Jitsi Meet secret
+    ///
+    /// # Arguments
+    ///
+    /// * 'secret' - Jitsi Meet secret
+    ///
+    /// # Returns
+    ///
+    /// This function returns nothing
+    pub fn jitsi_secret(mut self, secret: &str) -> Self {
+        self.jitsi_secret = Some(String::from(secret));
+
+        self
+    }
+
+    /// Set Jitsi Meet key identifier (kid)
+    ///
+    /// # Arguments
+    ///
+    /// * 'kid' - Key identifier
+    ///
+    /// # Returns
+    ///
+    /// This function returns nothing
+    pub fn jitsi_kid(mut self, kid: &str) -> Self {
+        self.jitsi_kid = Some(String::from(kid));
+
+        self
+    }
+
     /// Build application
     ///
     /// # Arguments
@@ -91,6 +148,30 @@ impl AppBuilder {
             Status::Internal(None)
         })?;
 
-        Ok(build_routes(Arc::new(AppState { db, secret })))
+        let jitsi_app_id = self.jitsi_app_id.ok_or_else(|| {
+            log::error!("Jitsi Meet application id MUST be specified!");
+
+            Status::Internal(None)
+        })?;
+
+        let jitsi_secret = self.jitsi_secret.ok_or_else(|| {
+            log::error!("Jitsi Meet secret MUST be specified!");
+
+            Status::Internal(None)
+        })?;
+
+        let jitsi_kid = self.jitsi_kid.ok_or_else(|| {
+            log::error!("Jitsi Meet key identifier MUST be specified!");
+
+            Status::Internal(None)
+        })?;
+
+        Ok(build_routes(Arc::new(AppState {
+            db,
+            secret,
+            jitsi_app_id,
+            jitsi_secret,
+            jitsi_kid,
+        })))
     }
 }

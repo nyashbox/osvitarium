@@ -71,10 +71,10 @@ mod tests {
     use crate::models::user::User;
     use crate::repositories::user::MockUserRepository;
 
-    use crate::services::utils;
+    
 
-    use entity::student::Model as StudentModel;
-    use entity::user::Model as UserModel;
+    
+    
 
     use entity::sea_orm_active_enums::UserRole;
 
@@ -95,51 +95,23 @@ mod tests {
 
             Box::pin(async move {
                 match usr.as_str() {
-                    "exists" => Ok(User::Student(
-                        UserModel {
-                            user_id: 1,
-                            username: "success".into(),
-                            fullname: "John Doe".into(),
-                            password: utils::hash_password("password").unwrap(),
-                            description: " ".into(),
-                            metadata: "{}".into(),
-                            role: UserRole::Student,
-                        },
-                        StudentModel {
-                            user_id: 1,
-                            student_id: 1,
-                        },
-                    )),
+                    "exists" => Ok(User::mock_user(UserRole::Student)),
                     _ => Err(Status::NotFound(None)),
                 }
             })
         });
 
-        mock.expect_create().return_once(|_, _, _| {
-            Box::pin(async move {
-                Ok(User::Student(
-                    UserModel {
-                        user_id: 1,
-                        username: "success".into(),
-                        fullname: "John Doe".into(),
-                        password: utils::hash_password("password").unwrap(),
-                        description: " ".into(),
-                        metadata: "{}".into(),
-                        role: UserRole::Student,
-                    },
-                    StudentModel {
-                        user_id: 1,
-                        student_id: 1,
-                    },
-                ))
-            })
-        });
+        mock.expect_create()
+            .return_once(|_, _, _| Box::pin(async move { Ok(User::mock_user(UserRole::Student)) }));
 
         let router = Router::new()
             .route("/signup", routing::post(signup_post_handler))
             .with_state(Arc::new(AppState {
                 db: mock,
                 secret: "secret".into(),
+                jitsi_app_id: "app_state".into(),
+                jitsi_secret: "secret".into(),
+                jitsi_kid: "secret".into(),
             }));
 
         let request = AxumRequest::builder()

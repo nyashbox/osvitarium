@@ -1,9 +1,10 @@
 use crate::app::status::AppStatus as Status;
 
-use crate::models::Course;
+use crate::models::{Course, User};
 
 use entity::course::{ActiveModel as ActiveCourseModel, Entity as CourseEntity};
 
+use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, EntityTrait, SqlErr};
 
 use log::error;
@@ -51,6 +52,40 @@ pub trait CourseRepository {
         &self,
         id: i32,
     ) -> impl std::future::Future<Output = Result<Course, Status>> + Send;
+
+    /// Add course instructor
+    ///
+    /// # Arguments
+    ///
+    /// * 'coruse_id' - Course identifier
+    /// * 'course_instructor' - Instructor
+    ///
+    /// # Returns
+    ///
+    /// On success: Nothing
+    /// On failure: Application status
+    fn add_instructor(
+        &self,
+        course_id: i32,
+        instructor: &User,
+    ) -> impl std::future::Future<Output = Result<(), Status>> + Send;
+
+    /// Add course attendee (student)
+    ///
+    /// # Arguments
+    ///
+    /// * 'course_id' - Course identifier
+    /// * 'attendee' - Attendee
+    ///
+    /// # Returns
+    ///
+    /// On success: Nothing
+    /// On failure: Application status
+    fn add_attendee(
+        &self,
+        course_id: i32,
+        attendee: &User,
+    ) -> impl std::future::Future<Output = Result<(), Status>> + Send;
 }
 
 impl CourseRepository for sea_orm::DatabaseConnection {
@@ -100,5 +135,37 @@ impl CourseRepository for sea_orm::DatabaseConnection {
             Some(model) => Ok(Course { model }),
             None => Err(Status::NotFound(None)),
         }
+    }
+
+    async fn add_instructor(&self, course_id: i32, instructor: &User) -> Result<(), Status> {
+        let _ = entity::course_instructor::ActiveModel {
+            course_id: Set(course_id),
+            instructor_id: Set(instructor.role_id()),
+        }
+        .insert(self)
+        .await
+        .map_err(|e| {
+            error!("Failed to add instructor to the course: {e}");
+
+            Status::Internal(None)
+        })?;
+
+        Ok(())
+    }
+
+    async fn add_attendee(&self, course_id: i32, attendee: &User) -> Result<(), Status> {
+        let _ = entity::course_student::ActiveModel {
+            course_id: Set(course_id),
+            student_id: Set(attendee.role_id()),
+        }
+        .insert(self)
+        .await
+        .map_err(|e| {
+            error!("Failed to add course attendee: {e}");
+
+            Status::Internal(None)
+        })?;
+
+        Ok(())
     }
 }

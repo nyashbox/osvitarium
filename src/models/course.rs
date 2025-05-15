@@ -27,3 +27,20 @@ impl Into<CourseRepresentation> for Course {
         }
     }
 }
+
+impl Course {
+    /// Check if meeting is running in the course
+    ///
+    /// # Arguments
+    ///
+    /// This function takes no arguments
+    ///
+    /// # Returns
+    ///
+    /// `true` - Meeting is running
+    /// `false` - Meeting is NOT running
+    #[inline(always)]
+    pub fn is_running_meeting(&self) -> bool {
+        self.model.is_running_meeting
+    }
+}

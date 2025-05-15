@@ -1,4 +1,8 @@
-use crate::{app::status::AppStatus as Status, services::utils};
+use crate::{
+    app::status::AppStatus as Status,
+    models::{Principal, Student, Teacher},
+    services::utils,
+};
 
 use entity::{
     principal::{ActiveModel as ActivePrincipalModel, Entity as PrincipalEntity},
@@ -12,7 +16,9 @@ use crate::models::user::User;
 
 use log::error;
 
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect, Set,
+};
 
 #[mockall::automock]
 pub trait UserRepository {
@@ -103,7 +109,13 @@ impl UserRepository for sea_orm::DatabaseConnection {
                     Status::Internal(None)
                 })?;
 
-                User::Student(user_model, student_model)
+                let student = Student {
+                    user_model,
+                    student_model,
+                    attended_courses: None,
+                };
+
+                User::Student(student)
             }
             UserRole::Teacher => {
                 let teacher_model = ActiveTeacherModel {
@@ -119,7 +131,13 @@ impl UserRepository for sea_orm::DatabaseConnection {
                     Status::Internal(None)
                 })?;
 
-                User::Teacher(user_model, teacher_model)
+                let teacher = Teacher {
+                    user_model,
+                    teacher_model,
+                    instructed_courses: None,
+                };
+
+                User::Teacher(teacher)
             }
             UserRole::Principal => {
                 let principal_model = ActivePrincipalModel {
@@ -135,7 +153,12 @@ impl UserRepository for sea_orm::DatabaseConnection {
                     Status::Internal(None)
                 })?;
 
-                User::Principal(user_model, principal_model)
+                let principal = Principal {
+                    user_model,
+                    principal_model,
+                };
+
+                User::Principal(principal)
             }
         })
     }
@@ -166,7 +189,27 @@ impl UserRepository for sea_orm::DatabaseConnection {
                     })?;
 
                 if let Some(student_model) = model {
-                    return Ok(User::Student(user, student_model));
+                    let attended_courses: Vec<i32> = entity::course_student::Entity::find()
+                        .select_only()
+                        .column(entity::course_student::Column::CourseId)
+                        .filter(
+                            entity::course_student::Column::StudentId.eq(student_model.student_id),
+                        )
+                        .into_values::<i32, entity::course_student::Column>()
+                        .all(self)
+                        .await
+                        .map_err(|e| {
+                            error!("Failed to fetch courses attended by the student: {e}");
+
+                            Status::Internal(None)
+                        })?;
+
+                    return Ok(User::Student(Student {
+                        user_model: user,
+                        student_model,
+                        attended_courses: (!attended_courses.is_empty())
+                            .then_some(attended_courses),
+                    }));
                 } else {
                     return Err(Status::Internal(None));
                 }
@@ -183,7 +226,28 @@ impl UserRepository for sea_orm::DatabaseConnection {
                     })?;
 
                 if let Some(teacher_model) = model {
-                    return Ok(User::Teacher(user, teacher_model));
+                    let instructed_courses = entity::course_instructor::Entity::find()
+                        .select_only()
+                        .column(entity::course_instructor::Column::CourseId)
+                        .filter(
+                            entity::course_instructor::Column::InstructorId
+                                .eq(teacher_model.teacher_id),
+                        )
+                        .into_values::<i32, entity::course_student::Column>()
+                        .all(self)
+                        .await
+                        .map_err(|e| {
+                            error!("Failed to fetch courses instructed by the teacher: {e}");
+
+                            Status::Internal(None)
+                        })?;
+
+                    return Ok(User::Teacher(Teacher {
+                        user_model: user,
+                        teacher_model,
+                        instructed_courses: (!instructed_courses.is_empty())
+                            .then_some(instructed_courses),
+                    }));
                 } else {
                     return Err(Status::Internal(None));
                 }
@@ -200,7 +264,10 @@ impl UserRepository for sea_orm::DatabaseConnection {
                     })?;
 
                 if let Some(principal_model) = model {
-                    return Ok(User::Principal(user, principal_model));
+                    return Ok(User::Principal(Principal {
+                        user_model: user,
+                        principal_model,
+                    }));
                 } else {
                     return Err(Status::Internal(None));
                 }

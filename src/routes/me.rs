@@ -16,10 +16,7 @@ mod tests {
         use tower::ServiceExt;
 
         use axum::{Router, body::Body, http::StatusCode, middleware, routing};
-        use entity::{
-            sea_orm_active_enums::UserRole, student::Model as StudentModel,
-            user::Model as UserModel,
-        };
+        use entity::sea_orm_active_enums::UserRole;
 
         use crate::{
             app::state::AppState, middleware::auth::auth_middleware, models::user::User,
@@ -34,23 +31,7 @@ mod tests {
             let auth_header = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXhfc3ViIjoxLCJzdWIiOjEsImlhdCI6MTExMTExMTExMTEsImV4cCI6OTk5OTk5OTk5OTksInJvbGUiOiJzdHVkZW50In0.zOIV8xbN1eIM_n7AciKbuTkpgKbCHK6Kf1vFMgv3SKY";
 
             mock.expect_find_by_id().returning(move |_| {
-                Box::pin(async move {
-                    Ok(User::Student(
-                        UserModel {
-                            user_id: 1,
-                            username: "johndoe".into(),
-                            fullname: "John Doe".into(),
-                            password: "password".into(),
-                            description: " ".into(),
-                            metadata: "{}".into(),
-                            role: UserRole::Student,
-                        },
-                        StudentModel {
-                            user_id: 1,
-                            student_id: 1,
-                        },
-                    ))
-                })
+                Box::pin(async move { Ok(User::mock_user(UserRole::Student)) })
             });
 
             let router = Router::new().route(
@@ -60,6 +41,9 @@ mod tests {
                         AppState {
                             db: mock,
                             secret: "secret".into(),
+                            jitsi_app_id: "app_id".into(),
+                            jitsi_secret: "secret".into(),
+                            jitsi_kid: "secret".into(),
                         }
                     }),
                     auth_middleware,

@@ -82,12 +82,11 @@ mod tests {
             models::user::User,
             repositories::user::MockUserRepository,
             routes::login::{Request, login_post_handler},
-            services::utils,
         };
 
-        use entity::student::Model as StudentModel;
+        
 
-        use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
+        use entity::sea_orm_active_enums::UserRole;
 
         use std::sync::Arc;
 
@@ -97,31 +96,17 @@ mod tests {
         async fn success() {
             let mut mock = MockUserRepository::new();
 
-            mock.expect_find_by_username().return_once(|_| {
-                Box::pin(async move {
-                    Ok(User::Student(
-                        UserModel {
-                            user_id: 1,
-                            username: "johndoe".into(),
-                            fullname: "John Doe".into(),
-                            password: utils::hash_password("password").unwrap(),
-                            description: " ".into(),
-                            metadata: "{}".into(),
-                            role: UserRole::Student,
-                        },
-                        StudentModel {
-                            user_id: 1,
-                            student_id: 1,
-                        },
-                    ))
-                })
-            });
+            mock.expect_find_by_username()
+                .return_once(|_| Box::pin(async move { Ok(User::mock_user(UserRole::Student)) }));
 
             let router = Router::new()
                 .route("/login", routing::post(login_post_handler))
                 .with_state(Arc::new(AppState {
                     db: mock,
                     secret: "secret".into(),
+                    jitsi_app_id: "app".into(),
+                    jitsi_secret: "secret".into(),
+                    jitsi_kid: "secret".into(),
                 }));
 
             let request = AxumRequest::builder()
@@ -151,23 +136,7 @@ mod tests {
             let mut mock = MockUserRepository::new();
 
             mock.expect_find_by_username().return_once(move |_| {
-                Box::pin(async move {
-                    Ok(User::Student(
-                        UserModel {
-                            user_id: 1,
-                            username: "username".into(),
-                            fullname: "John Doe".into(),
-                            password: utils::hash_password("wrong").unwrap(),
-                            description: " ".into(),
-                            metadata: "{}".into(),
-                            role: UserRole::Student,
-                        },
-                        StudentModel {
-                            user_id: 1,
-                            student_id: 1,
-                        },
-                    ))
-                })
+                Box::pin(async move { Ok(User::mock_user(UserRole::Student)) })
             });
 
             let router = Router::new()
@@ -175,6 +144,9 @@ mod tests {
                 .with_state(Arc::new(AppState {
                     db: mock,
                     secret: "secret".into(),
+                    jitsi_app_id: "app_id".into(),
+                    jitsi_secret: "secret".into(),
+                    jitsi_kid: "secret".into(),
                 }));
 
             let request = AxumRequest::builder()
@@ -184,7 +156,7 @@ mod tests {
                 .body(Body::from(
                     serde_json::to_string(&Request {
                         username: "username".to_string(),
-                        password: "password".to_string(),
+                        password: "wrong_password".to_string(),
                     })
                     .unwrap(),
                 ))

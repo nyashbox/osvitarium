@@ -85,7 +85,6 @@ pub mod post {
 
         use crate::{
             models::Course, repositories::course::MockCourseRepository,
-            services::utils::hash_password,
         };
 
         use super::*;
@@ -108,6 +107,7 @@ pub mod post {
                                 description: None,
                                 is_active: true,
                                 created_at: chrono::Utc::now().naive_utc(),
+                                is_running_meeting: false,
                             },
                         }),
                         _ => Err(Status::AlreadyExists(None)),
@@ -117,24 +117,15 @@ pub mod post {
 
             let router: Router = Router::new()
                 .route("/courses", routing::post(courses_post_handler))
-                .layer(Extension(User::Teacher(
-                    entity::user::Model {
-                        user_id: 1,
-                        username: "username".into(),
-                        fullname: "John Doe".into(),
-                        password: hash_password("wrong").unwrap(),
-                        description: " ".into(),
-                        metadata: "{}".into(),
-                        role: entity::sea_orm_active_enums::UserRole::Teacher,
-                    },
-                    entity::teacher::Model {
-                        user_id: 1,
-                        teacher_id: 1,
-                    },
+                .layer(Extension(User::mock_user(
+                    entity::sea_orm_active_enums::UserRole::Teacher,
                 )))
                 .with_state(Arc::new(AppState {
                     db: mock,
                     secret: "secret".into(),
+                    jitsi_app_id: "app_id".into(),
+                    jitsi_secret: "secret".into(),
+                    jitsi_kid: "secret".into(),
                 }));
 
             let request = AxumRequest::builder()

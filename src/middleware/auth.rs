@@ -76,21 +76,7 @@ mod tests {
         mock.expect_find_by_id().return_once(|id| {
             Box::pin(async move {
                 match id {
-                    1 => Ok(User::Student(
-                        entity::user::Model {
-                            user_id: 1,
-                            username: "johndoe".into(),
-                            fullname: "John Doe".into(),
-                            password: "".into(),
-                            description: " ".into(),
-                            metadata: "{}".into(),
-                            role: UserRole::Student,
-                        },
-                        entity::student::Model {
-                            user_id: 1,
-                            student_id: 1,
-                        },
-                    )),
+                    1 => Ok(User::mock_user(UserRole::Student)),
                     _ => Err(Status::NotFound(None)),
                 }
             })
@@ -101,6 +87,9 @@ mod tests {
                 Arc::new(AppState {
                     db: mock,
                     secret: MOCK_SECRET.into(),
+                    jitsi_app_id: "app_id".into(),
+                    jitsi_secret: MOCK_SECRET.into(),
+                    jitsi_kid: MOCK_SECRET.into(),
                 }),
                 auth_middleware,
             ),

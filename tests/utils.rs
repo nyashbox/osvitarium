@@ -38,7 +38,13 @@ pub async fn build_app_state(secret: &str) -> AppState<DatabaseConnection> {
         .await
         .expect("[Integration Testing] Failed to run database migrations!");
 
-    AppState { db, secret }
+    AppState {
+        db,
+        secret,
+        jitsi_app_id: std::env::var("JITSI_APP_ID_TEST").unwrap(),
+        jitsi_secret: std::env::var("JITSI_SECRET_TEST").unwrap(),
+        jitsi_kid: std::env::var("JITSI_KID_TEST").unwrap(),
+    }
 }
 
 /// Remove all data from the database (except migrations)
