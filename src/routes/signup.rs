@@ -7,16 +7,29 @@ use axum::{Json, extract::State};
 use entity::sea_orm_active_enums::UserRole;
 use sea_orm::ActiveEnum;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use std::sync::Arc;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct Request {
     pub username: String,
     pub password: String,
     pub role: String,
 }
 
+/// Create new user profile
+#[utoipa::path(
+    post,
+    tag = "Authentication",
+    path = "/signup",
+    request_body = Request,
+    responses(
+        (status = 200, description = "Success"),
+        (status = 400, description = "Bad Request"),
+        (status = 409, description = "Already Exists")
+    )
+)]
 pub async fn signup_post_handler<S>(
     State(state): State<Arc<AppState<S>>>,
     Json(request_body): Json<Request>,
@@ -70,11 +83,6 @@ mod tests {
 
     use crate::models::user::User;
     use crate::repositories::user::MockUserRepository;
-
-    
-
-    
-    
 
     use entity::sea_orm_active_enums::UserRole;
 

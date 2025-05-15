@@ -15,6 +15,19 @@ pub mod get {
 
     use super::*;
 
+    /// Get meeting credentials
+    #[utoipa::path(
+        get, 
+        tag = "Courses",
+        path = "/courses/{id}/meeting", 
+        responses(
+            (status = 200, description = "Success"),
+            (status = 401, description = "Unauthorized")
+        ),
+        security(
+            ("jwt_token" = [])
+        )
+    )]
     pub async fn meeting_get<S>(
         Extension(user): Extension<User>,
         State(state): State<Arc<AppState<S>>>,
@@ -74,6 +87,19 @@ pub mod post {
 
     use super::*;
 
+    /// Create new meeting
+    #[utoipa::path(
+        post, 
+        tag = "Courses",
+        path = "/courses/{id}/meeting", 
+        responses(
+            (status = 200, description = "Success"),
+            (status = 401, description = "Unauthorized")
+        ),
+        security(
+            ("jwt_token" = [])
+        )
+    )]
     pub async fn meeting_post_create<S>(
         Extension(user): Extension<User>,
         State(state): State<Arc<AppState<S>>>,

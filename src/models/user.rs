@@ -3,6 +3,7 @@ use crate::models::{Principal, Student, Teacher};
 use entity::user::Model as UserModel;
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Represents user
 #[derive(Clone)]
@@ -18,7 +19,7 @@ pub enum User {
 }
 
 /// JSON-serializable representation that can be safely returned from the app
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct UserRepresentation {
     user_id: i32,
     username: String,

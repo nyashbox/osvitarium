@@ -6,11 +6,12 @@ use crate::{
 
 use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use std::sync::Arc;
 
 /// Authentication request
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct Request {
     /// Username
     pub username: String,
@@ -20,7 +21,7 @@ pub struct Request {
 }
 
 /// Authentication response
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct Response {
     /// Authentication token
     pub access_token: String,
@@ -32,6 +33,15 @@ pub struct Response {
     pub expires_in: u64,
 }
 
+/// Perform authentication with username/password pair
+#[utoipa::path(
+    post,
+    tag = "Authentication",
+    path = "/login",
+    responses(
+        (status = 200, description = "Success")
+    )
+)]
 pub async fn login_post_handler<S>(
     State(state): State<Arc<AppState<S>>>,
     Json(request_body): Json<Request>,
@@ -83,8 +93,6 @@ mod tests {
             repositories::user::MockUserRepository,
             routes::login::{Request, login_post_handler},
         };
-
-        
 
         use entity::sea_orm_active_enums::UserRole;
 

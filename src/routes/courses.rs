@@ -10,6 +10,18 @@ pub mod get {
     use axum::extract::{Path, State};
     use axum::{Extension, response::Json};
 
+    /// Get course description
+    #[utoipa::path(
+        get,
+        tag = "Courses",
+        path = "/courses",
+        responses(
+            (status = 200, description = "Success")
+        ),
+        security(
+            ("jwt_token" = [])
+        )
+    )]
     pub async fn courses_get_handler<S>(
         Extension(_user): Extension<User>,
         State(state): State<Arc<AppState<S>>>,
@@ -40,6 +52,7 @@ pub mod get {
 pub mod post {
     use axum::{Extension, Json, extract::State};
     use serde::{Deserialize, Serialize};
+    use utoipa::ToSchema;
 
     use crate::app::state::AppState;
     use crate::app::status::AppStatus as Status;
@@ -49,11 +62,23 @@ pub mod post {
 
     use std::sync::Arc;
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, ToSchema)]
     pub struct Request {
         pub title: String,
     }
 
+    /// Create new course
+    #[utoipa::path(
+        post,
+        tag = "Courses",
+        path = "/courses",
+        responses(
+            (status = 200, description = "Success")
+        ),
+        security(
+            ("jwt_token" = [])
+        )
+    )]
     pub async fn courses_post_handler<S>(
         Extension(user): Extension<User>,
         State(state): State<Arc<AppState<S>>>,
@@ -83,9 +108,7 @@ pub mod post {
         use sea_orm::sqlx::types::chrono;
         use tower::ServiceExt;
 
-        use crate::{
-            models::Course, repositories::course::MockCourseRepository,
-        };
+        use crate::{models::Course, repositories::course::MockCourseRepository};
 
         use super::*;
 

@@ -4,6 +4,18 @@ use crate::models::user::UserRepresentation as Response;
 
 use axum::{Json, extract::Extension};
 
+/// Returns the authenticated user's information
+#[utoipa::path(
+    get, 
+    tag = "Profile",
+    path = "/me", 
+    responses(
+        (status = 200, description = "Success", body = Response)
+    ),
+    security(
+        ("jwt_token" = [])
+    )
+)]
 pub async fn me_get_handler(Extension(user): Extension<User>) -> Result<Json<Response>, Status> {
     Ok(Json(user.into()))
 }
