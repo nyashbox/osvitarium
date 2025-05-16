@@ -59,10 +59,12 @@ where
         )
         .route(
             "/me",
-            routing::get(me::me::get_profile_information).layer(middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            routing::get(me::me::get_profile_information)
+                .delete(me::me::delete_my_profile)
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    auth_middleware,
+                )),
         )
         .with_state(state)
         .merge(SwaggerUi::new("/docs").url("/api-doc/openapi.json", ApiDoc::openapi()))
@@ -111,6 +113,7 @@ mod docs {
             signup_post_handler,
             get_profile_information,
             delete_course_by_id,
+            delete_my_profile,
         ),
         security(
             ("jwt_token" = [])

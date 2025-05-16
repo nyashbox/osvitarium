@@ -68,6 +68,21 @@ pub trait UserRepository {
         &self,
         username: &str,
     ) -> impl std::future::Future<Output = Result<User, Status>> + Send;
+
+    /// Delete user profile
+    ///
+    /// # Arguments
+    ///
+    /// * 'user' - User that should be deleted
+    ///
+    /// # Returns
+    ///
+    /// On success: Nothing
+    /// On failure: Application status
+    fn delete_user(
+        &self,
+        user: &User,
+    ) -> impl std::future::Future<Output = Result<(), Status>> + Send;
 }
 
 impl UserRepository for sea_orm::DatabaseConnection {
@@ -289,6 +304,24 @@ impl UserRepository for sea_orm::DatabaseConnection {
         match user {
             Some(model) => Ok(self.find_by_id(model.user_id).await?),
             None => Err(Status::NotFound(None)),
+        }
+    }
+
+    async fn delete_user(&self, user: &User) -> Result<(), Status> {
+        let delete_result = UserEntity::delete_by_id(user.user_id())
+            .exec(self)
+            .await
+            .map_err(|e| {
+                error!("Failed to delete user: {e}");
+                Status::Internal(None)
+            })?;
+
+        if delete_result.rows_affected == 0 {
+            Err(Status::NotFound(Some(
+                "User with specified ID was not found!".into(),
+            )))
+        } else {
+            Ok(())
         }
     }
 }

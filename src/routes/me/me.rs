@@ -2,6 +2,8 @@ use crate::routes::prelude::*;
 
 use crate::models::user::UserRepresentation as Response;
 
+use crate::repositories::user::UserRepository;
+
 /// Returns the authenticated user's information
 #[utoipa::path(
     get, 
@@ -19,6 +21,30 @@ pub async fn get_profile_information(
     Extension(user): Extension<User>,
 ) -> Result<Json<Response>, Status> {
     Ok(Json(user.into()))
+}
+
+#[utoipa::path(
+    delete,
+    tag = "Profile",
+    path = "/me",
+    responses(
+        (status = 200, description = "Success"),
+        (status = 401, description = "Unauthenticated")
+    ),
+    security(
+        ("jwt_token" = [])
+    )
+)]
+pub async fn delete_my_profile<S>(
+    Extension(user): Extension<User>,
+    State(state): State<Arc<AppState<S>>>,
+) -> Result<Status, Status>
+where
+    S: UserRepository,
+{
+    UserRepository::delete_user(&state.db, &user).await?;
+
+    Ok(Status::Ok("Profile deleted successfully!".into()))
 }
 
 #[cfg(test)]
