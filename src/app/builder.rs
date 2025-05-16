@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::Router;
 
+use migration::{MigrationTrait, Migrator, MigratorTrait};
 use sea_orm::Database;
 
 use crate::{app::state::AppState, app::status::AppStatus as Status, routes::build_routes};
@@ -144,6 +145,13 @@ impl AppBuilder {
 
         let db = Database::connect(db_url).await.map_err(|e| {
             log::error!("Failed to create database connection: {e}");
+
+            Status::Internal(None)
+        })?;
+
+        // Apply database migrations
+        Migrator::up(&db, None).await.map_err(|e| {
+            log::error!("Failed to run database migrations: {e}");
 
             Status::Internal(None)
         })?;

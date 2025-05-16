@@ -1,0 +1,23 @@
+services:
+  database:
+    image: postgres:17
+    restart: always
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB 
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    depends_on:
+      - database
+    environment:
+      - OSVITARIUM_DATABASE_URL
+      - OSVITARIUM_SECRET
+      - OSVITARIUM_JITSI_SECRET 
+      - OSVITARIUM_JITSI_APP_ID 
+      - OSVITARIUM_JITSI_KID
+    ports: 
+     - "8080:8080"
