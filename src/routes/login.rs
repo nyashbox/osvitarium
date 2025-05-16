@@ -1,17 +1,13 @@
-use crate::{
-    app::{state::AppState, status::AppStatus as Status},
-    repositories::user::UserRepository,
-    services::user::UserService,
-};
+use crate::routes::prelude::*;
 
-use axum::{Json, extract::State};
-use serde::{Deserialize, Serialize};
+use crate::repositories::user::UserRepository;
+use crate::services::user::UserService;
+
 use utoipa::ToSchema;
-
-use std::sync::Arc;
 
 /// Authentication request
 #[derive(Serialize, Deserialize, ToSchema)]
+#[schema(title = "AuthRequest", description = "Authentication request")]
 pub struct Request {
     /// Username
     pub username: String,
@@ -22,6 +18,7 @@ pub struct Request {
 
 /// Authentication response
 #[derive(Serialize, Deserialize, ToSchema)]
+#[schema(title = "AuthToken", description = "Authentication token (JWT)")]
 pub struct Response {
     /// Authentication token
     pub access_token: String,

@@ -1,8 +1,6 @@
-use crate::{app::status::AppStatus as Status, models::user::User};
+use crate::routes::prelude::*;
 
 use crate::models::user::UserRepresentation as Response;
-
-use axum::{Json, extract::Extension};
 
 /// Returns the authenticated user's information
 #[utoipa::path(
@@ -10,29 +8,35 @@ use axum::{Json, extract::Extension};
     tag = "Profile",
     path = "/me", 
     responses(
-        (status = 200, description = "Success", body = Response)
+        (status = 200, description = "Success", body = Response),
+        (status = 401, description = "Unauthenticated")
     ),
     security(
         ("jwt_token" = [])
     )
 )]
-pub async fn me_get_handler(Extension(user): Extension<User>) -> Result<Json<Response>, Status> {
+pub async fn get_profile_information(
+    Extension(user): Extension<User>,
+) -> Result<Json<Response>, Status> {
     Ok(Json(user.into()))
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     mod me_get_handler {
-        use std::sync::Arc;
+        use super::*;
 
         use tower::ServiceExt;
 
-        use axum::{Router, body::Body, http::StatusCode, middleware, routing};
+        use axum::{body::Body, http::StatusCode, middleware, routing};
+
         use entity::sea_orm_active_enums::UserRole;
 
         use crate::{
             app::state::AppState, middleware::auth::auth_middleware, models::user::User,
-            repositories::user::MockUserRepository, routes::me::me_get_handler,
+            repositories::user::MockUserRepository,
         };
 
         use axum::http::Request;
@@ -48,7 +52,7 @@ mod tests {
 
             let router = Router::new().route(
                 "/me",
-                routing::get(me_get_handler).layer(middleware::from_fn_with_state(
+                routing::get(get_profile_information).layer(middleware::from_fn_with_state(
                     Arc::new({
                         AppState {
                             db: mock,

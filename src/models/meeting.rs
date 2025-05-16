@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// JSON-serializable representation that can be safely returned from the app routes
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[schema(title = "Meeting", description = "Meeting object")]
 pub struct MeetingRepresentation {
     /// Meeting Identifier
     pub meeting_id: String,

@@ -1,19 +1,18 @@
+use crate::routes::prelude::*;
+
 pub mod courses;
 pub mod login;
 pub mod me;
-pub mod meeting;
+pub mod prelude;
 pub mod signup;
 
-use std::sync::Arc;
+use axum::{middleware, routing};
 
-use axum::{Router, middleware, routing};
-use docs::ApiDoc;
+use crate::{middleware::auth::auth_middleware, repositories::RepositoryTrait};
+
+use crate::routes::docs::ApiDoc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-
-use crate::{
-    app::state::AppState, middleware::auth::auth_middleware, repositories::RepositoryTrait,
-};
 
 /// Build application router
 ///
@@ -33,8 +32,8 @@ where
         .route("/signup", routing::post(signup::signup_post_handler))
         .route(
             "/courses",
-            routing::get(courses::get::courses_get_handler)
-                .post(courses::post::courses_post_handler)
+            routing::get(courses::courses::get_all_courses)
+                .post(courses::courses::create_new_course)
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     auth_middleware,
@@ -42,14 +41,15 @@ where
         )
         .route(
             "/courses/{id}",
-            routing::get(courses::get::courses_get_one_handler).layer(
-                middleware::from_fn_with_state(state.clone(), auth_middleware),
-            ),
+            routing::get(courses::courses::get_course_by_id).layer(middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware,
+            )),
         )
         .route(
             "/courses/{id}/meeting",
-            routing::get(meeting::get::meeting_get)
-                .post(meeting::post::meeting_post_create)
+            routing::get(courses::meeting::get_course_meeting_credentials)
+                .post(courses::meeting::create_new_course_meeting)
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     auth_middleware,
@@ -57,7 +57,7 @@ where
         )
         .route(
             "/me",
-            routing::get(me::me_get_handler).layer(middleware::from_fn_with_state(
+            routing::get(me::me::get_profile_information).layer(middleware::from_fn_with_state(
                 state.clone(),
                 auth_middleware,
             )),
@@ -71,14 +71,6 @@ mod docs {
         Modify, OpenApi,
         openapi::security::{HttpBuilder, SecurityScheme},
     };
-
-    use super::signup::*;
-    use super::me::*;
-    use super::login::*;
-    use super::courses::get::*;
-    use super::courses::post::*;
-    use super::meeting::get::*;
-    use super::meeting::post::*;
 
     pub struct SecurityAddon;
 
@@ -98,19 +90,32 @@ mod docs {
         }
     }
 
+    use super::courses::courses::*;
+    use super::courses::meeting::*;
+    use super::login::*;
+    use super::signup::*;
+
+    use super::me::me::*;
+
     #[derive(OpenApi)]
     #[openapi(
         paths(
-            signup_post_handler,
-            me_get_handler,
+            get_all_courses,
+            get_course_by_id,
+            create_new_course,
+            create_new_course_meeting,
+            get_course_meeting_credentials,
             login_post_handler,
-            courses_get_handler,
-            courses_post_handler,
-            meeting_get,
-            meeting_post_create,
-        ), 
+            signup_post_handler,
+            get_profile_information,
+        ),
         security(
             ("jwt_token" = [])
+        ),
+        tags(
+            (name = "Authentication", description = "Authentication endpoints"),
+            (name = "Profile", description = "Profile endpoints. Requires prior authentication (see Authentication section)"),
+            (name = "Courses", description = "Courses endpoints")
         ),
         modifiers(&SecurityAddon)
     )]

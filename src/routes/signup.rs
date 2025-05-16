@@ -1,15 +1,9 @@
-use crate::{
-    app::{state::AppState, status::AppStatus as Status},
-    repositories::user::UserRepository,
-};
+use crate::routes::prelude::*;
 
-use axum::{Json, extract::State};
-use entity::sea_orm_active_enums::UserRole;
+use crate::repositories::user::UserRepository;
+
 use sea_orm::ActiveEnum;
-use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-
-use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct Request {

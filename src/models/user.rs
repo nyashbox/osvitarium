@@ -20,6 +20,7 @@ pub enum User {
 
 /// JSON-serializable representation that can be safely returned from the app
 #[derive(Serialize, Deserialize, ToSchema)]
+#[schema(title = "User", description = "User object")]
 pub struct UserRepresentation {
     user_id: i32,
     username: String,

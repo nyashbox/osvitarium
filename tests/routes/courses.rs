@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use osvitarium_backend::repositories::course::CourseRepository;
 use osvitarium_backend::{repositories::user::UserRepository, routes::build_routes};
 
-use osvitarium_backend::routes::courses::post;
+use osvitarium_backend::routes::courses::courses::Request;
 
 use crate::{
     test_builder::TestBuilder,
@@ -58,7 +58,7 @@ pub async fn courses_post_test(
         .authenticate_as(Student)
         .with_credentials("username", "password")
         .route("POST", "/courses")
-        .with_body(&post::Request {
+        .with_body(&Request {
             title: title.into(),
         });
 
