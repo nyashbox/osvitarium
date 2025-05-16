@@ -98,3 +98,40 @@ pub async fn courses_get_one_test(#[case] mut id: i32, #[case] expected: StatusC
     assert_eq!(res.status(), expected);
     empty_database(&state.db).await;
 }
+
+#[rstest::rstest]
+#[case::success("instructor", StatusCode::OK)]
+#[case::insufficient_permissions("student", StatusCode::FORBIDDEN)]
+#[tokio::test]
+pub async fn delete_course_by_id(#[case] username: &str, #[case] expected: StatusCode) {
+    let state = Arc::new(build_app_state("secret").await);
+    empty_database(&state.db).await;
+
+    let router = build_routes(state.clone());
+
+    let course = CourseRepository::create_course(&state.db, "Mathematics 101")
+        .await
+        .unwrap();
+
+    let instructor = UserRepository::create(&state.db, "instructor", "password", UserRole::Teacher)
+        .await
+        .unwrap();
+
+    CourseRepository::add_instructor(&state.db, course.model.course_id, &instructor)
+        .await
+        .unwrap();
+
+    let _ = UserRepository::create(&state.db, "student", "password", Student).await;
+
+    let id = course.model.course_id;
+
+    let request = TestBuilder::new(router)
+        .authenticate_as(Student)
+        .with_credentials(username, "password")
+        .route("DELETE", &format!("/courses/{id}"));
+
+    let res = request.run().await;
+
+    assert_eq!(res.status(), expected);
+    empty_database(&state.db).await;
+}

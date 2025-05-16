@@ -6,6 +6,10 @@ use sea_orm::ActiveEnum;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, ToSchema)]
+#[schema(
+    title = "SignupCredentials",
+    description = "Credentials that are required to create new user profile"
+)]
 pub struct Request {
     pub username: String,
     pub password: String,

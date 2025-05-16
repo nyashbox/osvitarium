@@ -32,4 +32,21 @@ impl Teacher {
             None => false,
         }
     }
+
+    /// Check if teacher is instructing a course with specified course id
+    ///
+    /// # Arguments
+    ///
+    /// * 'course_id' - Course identifier
+    ///
+    /// # Returns
+    ///
+    /// `true` - Course is instructed by the teacher
+    /// `false` - Course is NOT instructed by the teacher
+    pub fn is_instructing_id(&self, course_id: i32) -> bool {
+        match &self.instructed_courses {
+            Some(courses) => courses.contains(&course_id),
+            None => false,
+        }
+    }
 }

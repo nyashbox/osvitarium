@@ -91,6 +91,51 @@ where
     Ok(Status::Ok("Course created successfully!".into()))
 }
 
+/// Delete course with specified course identifier (ID)
+#[utoipa::path(
+    delete,
+    path = "/courses/{id}",
+    tag = "Courses",
+    responses(
+        (status = 200, description = "Success"),
+        (status = 401, description = "Unauthenticated"),
+        (status = 403, description = "Permission denied"),
+    ),
+    security(
+        ("jwt_token" = [])
+    )
+)]
+pub async fn delete_course_by_id<S>(
+    Extension(user): Extension<User>,
+    State(state): State<Arc<AppState<S>>>,
+    Path(course_id): Path<i32>,
+) -> Result<Status, Status>
+where
+    S: CourseRepository,
+{
+    match user {
+        User::Teacher(teacher) => {
+            if teacher.is_instructing_id(course_id) {
+                CourseRepository::delete_course_by_id(&state.db, course_id).await?;
+
+                Ok(Status::Ok("Course was deleted successfully".into()))
+            } else {
+                Err(Status::PermissionDenied(Some(
+                    "Only course instructors and principals can delete this course".into(),
+                )))
+            }
+        }
+        User::Principal(_) => {
+            CourseRepository::delete_course_by_id(&state.db, course_id).await?;
+
+            Ok(Status::Ok("Course was deleted successfully".into()))
+        }
+        _ => Err(Status::PermissionDenied(Some(
+            "Only course instructors and principals can delete this course".into(),
+        ))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

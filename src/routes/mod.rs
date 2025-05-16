@@ -41,10 +41,12 @@ where
         )
         .route(
             "/courses/{id}",
-            routing::get(courses::courses::get_course_by_id).layer(middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            routing::get(courses::courses::get_course_by_id)
+                .delete(courses::courses::delete_course_by_id)
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    auth_middleware,
+                )),
         )
         .route(
             "/courses/{id}/meeting",
@@ -108,6 +110,7 @@ mod docs {
             login_post_handler,
             signup_post_handler,
             get_profile_information,
+            delete_course_by_id,
         ),
         security(
             ("jwt_token" = [])

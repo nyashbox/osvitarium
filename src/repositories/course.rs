@@ -86,6 +86,36 @@ pub trait CourseRepository {
         course_id: i32,
         attendee: &User,
     ) -> impl std::future::Future<Output = Result<(), Status>> + Send;
+
+    /// Delete course
+    ///
+    /// # Arguments
+    ///
+    /// * 'course' - Course that should be deleted
+    ///
+    /// # Returns
+    ///
+    /// On success: Nothing
+    /// On failure: Application status
+    fn delete_course(
+        &self,
+        course: &Course,
+    ) -> impl std::future::Future<Output = Result<(), Status>> + Send;
+
+    /// Delete course
+    ///
+    /// # Arguments
+    ///
+    /// * 'course_id' - Course identifier
+    ///
+    /// # Returns
+    ///
+    /// On success: Nothing
+    /// On failure: Application status
+    fn delete_course_by_id(
+        &self,
+        course_id: i32,
+    ) -> impl std::future::Future<Output = Result<(), Status>> + Send;
 }
 
 impl CourseRepository for sea_orm::DatabaseConnection {
@@ -167,5 +197,29 @@ impl CourseRepository for sea_orm::DatabaseConnection {
         })?;
 
         Ok(())
+    }
+
+    #[inline(always)]
+    async fn delete_course(&self, course: &Course) -> Result<(), Status> {
+        self.delete_course_by_id(course.model.course_id).await
+    }
+
+    async fn delete_course_by_id(&self, course_id: i32) -> Result<(), Status> {
+        let course = entity::course::Entity::delete_by_id(course_id)
+            .exec(self)
+            .await
+            .map_err(|e| {
+                error!("Failed to delete course by ID: {e}");
+
+                Status::Internal(None)
+            })?;
+
+        if course.rows_affected == 0 {
+            Err(Status::NotFound(Some(
+                "Course with specified ID was not found!".into(),
+            )))
+        } else {
+            Ok(())
+        }
     }
 }
