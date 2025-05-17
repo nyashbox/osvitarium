@@ -2,8 +2,9 @@
 
 use super::sea_orm_active_enums::UserRole;
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "user")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -18,12 +19,20 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::activity::Entity")]
+    Activity,
     #[sea_orm(has_many = "super::principal::Entity")]
     Principal,
     #[sea_orm(has_many = "super::student::Entity")]
     Student,
     #[sea_orm(has_many = "super::teacher::Entity")]
     Teacher,
+}
+
+impl Related<super::activity::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Activity.def()
+    }
 }
 
 impl Related<super::principal::Entity> for Entity {

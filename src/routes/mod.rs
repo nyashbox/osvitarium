@@ -51,6 +51,12 @@ where
                 )),
         )
         .route(
+            "/courses/{id}/activities",
+            routing::get(courses::activity::get_course_activities).layer(
+                middleware::from_fn_with_state(state.clone(), auth_middleware),
+            ),
+        )
+        .route(
             "/courses/{id}/meeting",
             routing::get(courses::meeting::get_course_meeting_credentials)
                 .post(courses::meeting::create_new_course_meeting)
@@ -103,6 +109,7 @@ mod docs {
         }
     }
 
+    use super::courses::activity::*;
     use super::courses::courses::*;
     use super::courses::meeting::*;
     use super::login::*;
@@ -125,6 +132,7 @@ mod docs {
             delete_course_by_id,
             delete_my_profile,
             get_user_description,
+            get_course_activities,
         ),
         security(
             ("jwt_token" = [])

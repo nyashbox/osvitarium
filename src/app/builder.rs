@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::Router;
 
-use migration::{MigrationTrait, Migrator, MigratorTrait};
+use migration::{Migrator, MigratorTrait};
 use sea_orm::Database;
 
 use crate::{app::state::AppState, app::status::AppStatus as Status, routes::build_routes};

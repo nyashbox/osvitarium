@@ -9,6 +9,7 @@ mod m20250507_103403_user_add_role_field;
 mod m20250509_160033_create_course_table;
 mod m20250511_104740_make_role_not_nullable;
 mod m20250511_162948_course_add_meeting_field;
+mod m20250517_083152_create_activities_table;
 
 pub struct Migrator;
 
@@ -25,6 +26,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250509_160033_create_course_table::Migration),
             Box::new(m20250511_104740_make_role_not_nullable::Migration),
             Box::new(m20250511_162948_course_add_meeting_field::Migration),
+            Box::new(m20250517_083152_create_activities_table::Migration),
         ]
     }
 }

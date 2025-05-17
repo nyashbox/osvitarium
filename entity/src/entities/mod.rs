@@ -2,6 +2,7 @@
 
 pub mod prelude;
 
+pub mod activity;
 pub mod course;
 pub mod course_instructor;
 pub mod course_student;

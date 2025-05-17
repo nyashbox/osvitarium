@@ -1,11 +1,11 @@
 use crate::app::status::AppStatus as Status;
 
-use crate::models::{Course, User};
+use crate::models::{Activity, Course, User};
 
 use entity::course::{ActiveModel as ActiveCourseModel, Entity as CourseEntity};
 
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ActiveModelTrait, EntityTrait, SqlErr};
+use sea_orm::{ActiveModelTrait, EntityTrait, ModelTrait, SqlErr};
 
 use log::error;
 
@@ -116,6 +116,11 @@ pub trait CourseRepository {
         &self,
         course_id: i32,
     ) -> impl std::future::Future<Output = Result<(), Status>> + Send;
+
+    fn get_activities(
+        &self,
+        course: &Course,
+    ) -> impl std::future::Future<Output = Result<Vec<Activity>, Status>> + Send;
 }
 
 impl CourseRepository for sea_orm::DatabaseConnection {
@@ -221,5 +226,23 @@ impl CourseRepository for sea_orm::DatabaseConnection {
         } else {
             Ok(())
         }
+    }
+
+    async fn get_activities(&self, course: &Course) -> Result<Vec<Activity>, Status> {
+        let activities = course
+            .model
+            .find_related(entity::activity::Entity)
+            .all(self)
+            .await
+            .map_err(|e| {
+                error!("Failed to get course activities: {e}");
+
+                Status::Internal(None)
+            })?;
+
+        Ok(activities
+            .into_iter()
+            .map(|activity_model| Activity { activity_model })
+            .collect())
     }
 }
