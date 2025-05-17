@@ -1,3 +1,4 @@
+use crate::middleware::auth;
 use crate::routes::prelude::*;
 
 pub mod courses;
@@ -5,6 +6,7 @@ pub mod login;
 pub mod me;
 pub mod prelude;
 pub mod signup;
+pub mod users;
 
 use axum::{middleware, routing};
 
@@ -66,6 +68,13 @@ where
                     auth_middleware,
                 )),
         )
+        .route(
+            "/users/{id}",
+            routing::get(users::users::get_user_description).layer(middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware,
+            )),
+        )
         .with_state(state)
         .merge(SwaggerUi::new("/docs").url("/api-doc/openapi.json", ApiDoc::openapi()))
 }
@@ -98,6 +107,7 @@ mod docs {
     use super::courses::meeting::*;
     use super::login::*;
     use super::signup::*;
+    use super::users::users::*;
 
     use super::me::me::*;
 
@@ -114,6 +124,7 @@ mod docs {
             get_profile_information,
             delete_course_by_id,
             delete_my_profile,
+            get_user_description,
         ),
         security(
             ("jwt_token" = [])
