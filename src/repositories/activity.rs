@@ -1,9 +1,11 @@
 use std::future::Future;
 
-use crate::app::AppStatus as Status;
+use crate::{app::AppStatus as Status, models::activity::CreateActivityDTO};
 
 use crate::models::Activity;
 
+use argon2::password_hash::rand_core::impls;
+use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, EntityTrait, IntoActiveModel, SqlErr};
 
 use log::error;
@@ -20,6 +22,24 @@ pub trait ActivityRepository {
     /// On success: Inserted activity
     /// On failure: Application status
     fn create(&self, activity: &Activity) -> impl Future<Output = Result<Activity, Status>> + Send;
+
+    /// Create new activity from DTO
+    ///
+    /// # Arguments
+    ///
+    /// * 'author_id' - Author ID
+    /// * 'course_id' - Course ID
+    /// * 'activity' - Activity DTO
+    ///
+    /// # Returns
+    ///
+    /// This function returns nothing
+    fn create_from_dto(
+        &self,
+        author_id: i32,
+        course_id: i32,
+        activity: CreateActivityDTO,
+    ) -> impl Future<Output = Result<Activity, Status>> + Send;
 
     /// Find acitvity by ID
     ///
@@ -74,6 +94,34 @@ impl ActivityRepository for sea_orm::DatabaseConnection {
 
                 Status::Internal(None)
             }
+        })?;
+
+        Ok(Activity { activity_model })
+    }
+
+    async fn create_from_dto(
+        &self,
+        author_id: i32,
+        course_id: i32,
+        activity: CreateActivityDTO,
+    ) -> Result<Activity, Status> {
+        let activity_model = entity::activity::ActiveModel {
+            title: Set(activity.title),
+            description: Set(activity.description),
+            r#type: Set(activity.r#type),
+            deadline: Set(activity.deadline),
+            points: Set(activity.points),
+            is_hidden: Set(activity.is_hidden),
+            author_id: Set(author_id),
+            course_id: Set(course_id),
+            ..Default::default()
+        }
+        .insert(self)
+        .await
+        .map_err(|e| {
+            error!("Failed to create new course: {e}");
+
+            Status::Internal(None)
         })?;
 
         Ok(Activity { activity_model })

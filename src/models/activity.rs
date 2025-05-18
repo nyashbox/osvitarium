@@ -1,7 +1,11 @@
-use entity::activity::Model as ActivityModel;
-use sea_orm::ActiveEnum;
+use entity::{activity::Model as ActivityModel, sea_orm_active_enums::ActivityType};
+use sea_orm::{ActiveEnum, ActiveValue::Set, prelude::DateTime};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use super::{Course, User};
+
+use sea_orm::TryIntoModel;
 
 /// Activity model
 #[derive(Debug)]
@@ -16,25 +20,26 @@ pub struct ActivityDTO {
     pub activity_id: i32,
     pub title: String,
     pub description: Option<String>,
-    pub r#type: String,
+    #[schema(value_type = String)]
+    pub r#type: ActivityType,
     pub course_id: i32,
-    pub published_at: String,
-    pub deadline: Option<String>,
+    #[schema(value_type = String)]
+    pub published_at: DateTime,
+    #[schema(value_type = Option<String>)]
+    pub deadline: Option<DateTime>,
     pub points: Option<i32>,
     pub is_hidden: bool,
     pub author_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[schema(
-    title = "ActivityCreate",
-    description = "DTO for creating new activity"
-)]
 pub struct CreateActivityDTO {
     pub title: String,
     pub description: Option<String>,
-    pub r#type: String,
-    pub deadline: Option<String>,
+    #[schema(value_type = String)]
+    pub r#type: ActivityType,
+    #[schema(value_type = Option<String>)]
+    pub deadline: Option<DateTime>,
     pub points: Option<i32>,
     pub is_hidden: bool,
 }
@@ -47,10 +52,10 @@ impl From<Activity> for ActivityDTO {
             activity_id: model.acitvity_id,
             title: model.title,
             description: model.description,
-            r#type: model.r#type.into_value(),
+            r#type: model.r#type,
             course_id: model.course_id,
-            published_at: model.published_at.to_string(),
-            deadline: model.deadline.map(|v| v.to_string()),
+            published_at: model.published_at,
+            deadline: model.deadline,
             points: model.points,
             is_hidden: model.is_hidden,
             author_id: model.author_id,

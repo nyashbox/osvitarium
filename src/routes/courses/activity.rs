@@ -1,4 +1,8 @@
-use crate::{models::activity::ActivityDTO, routes::prelude::*};
+use crate::{
+    models::activity::{ActivityDTO, CreateActivityDTO},
+    repositories::activity::ActivityRepository,
+    routes::prelude::*,
+};
 
 /// Get all course activities
 #[utoipa::path(
@@ -66,5 +70,43 @@ where
 
             Ok(Json(activity.into()))
         }
+    }
+}
+
+/// Get all course activities
+#[utoipa::path(
+    post,
+    tag = "Courses",
+    path = "/courses/{id}/activities",
+    responses(
+        (status = 200, description = "Success"),
+        (status = 401, description = "Unauthenticated"),
+        (status = 403, description = "Forbidden")
+    ),
+    security(
+        ("jwt_token" = [])
+    )
+)]
+pub async fn create_course_activity<S>(
+    Extension(user): Extension<User>,
+    State(state): State<Arc<AppState<S>>>,
+    Path(course_id): Path<i32>,
+    Json(activity): Json<CreateActivityDTO>,
+) -> Result<Status, Status>
+where
+    S: ActivityRepository,
+{
+    match &user {
+        User::Teacher(teacher) => {
+            if teacher.is_instructing_id(course_id) {
+                ActivityRepository::create_from_dto(&state.db, user.user_id(), course_id, activity)
+                    .await?;
+
+                Ok(Status::Ok("Course created successfully!".into()))
+            } else {
+                Err(Status::PermissionDenied(None))
+            }
+        }
+        _ => Err(Status::PermissionDenied(None)),
     }
 }
