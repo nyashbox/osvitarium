@@ -1,11 +1,7 @@
 use entity::{activity::Model as ActivityModel, sea_orm_active_enums::ActivityType};
-use sea_orm::{ActiveEnum, ActiveValue::Set, prelude::DateTime};
+use sea_orm::prelude::DateTime;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-
-use super::{Course, User};
-
-use sea_orm::TryIntoModel;
 
 /// Activity model
 #[derive(Debug)]
@@ -33,6 +29,7 @@ pub struct ActivityDTO {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[schema(title = "CreateActivity", description = "Create activity Object")]
 pub struct CreateActivityDTO {
     pub title: String,
     pub description: Option<String>,

@@ -1,4 +1,4 @@
-use crate::models::course::CourseRepresentation;
+use crate::models::course::{CourseCreateDTO, CourseDTO};
 
 use crate::routes::prelude::*;
 
@@ -19,14 +19,13 @@ use crate::routes::prelude::*;
 pub async fn get_all_courses<S>(
     Extension(_user): Extension<User>,
     State(state): State<Arc<AppState<S>>>,
-) -> Result<Json<Vec<CourseRepresentation>>, Status>
+) -> Result<Json<Vec<CourseDTO>>, Status>
 where
     S: CourseRepository,
 {
     let courses = state.db.find_all().await?;
 
-    let response: Vec<CourseRepresentation> =
-        courses.into_iter().map(|course| course.into()).collect();
+    let response: Vec<CourseDTO> = courses.into_iter().map(|course| course.into()).collect();
 
     Ok(Json(response))
 }
@@ -35,7 +34,7 @@ where
 #[utoipa::path(
     get,
     tag = "Courses",
-    path = "/courses",
+    path = "/courses/{id}",
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Unauthenticated"),
@@ -49,16 +48,11 @@ pub async fn get_course_by_id<S>(
     Extension(_user): Extension<User>,
     Path(course_id): Path<i32>,
     State(state): State<Arc<AppState<S>>>,
-) -> Result<Json<CourseRepresentation>, Status>
+) -> Result<Json<CourseDTO>, Status>
 where
     S: CourseRepository,
 {
     Ok(Json(state.db.find_by_id(course_id).await?.into()))
-}
-
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct Request {
-    pub title: String,
 }
 
 /// Create new course
@@ -76,19 +70,22 @@ pub struct Request {
 pub async fn create_new_course<S>(
     Extension(user): Extension<User>,
     State(state): State<Arc<AppState<S>>>,
-    Json(request_body): Json<Request>,
+    Json(request_body): Json<CourseCreateDTO>,
 ) -> Result<Status, Status>
 where
     S: CourseRepository,
 {
-    // Only teachers are allowed to create courses
-    if !user.is_teacher() {
-        return Err(Status::Unauthenticated(None));
+    match user {
+        User::Teacher(_) => {
+            let course = CourseRepository::create_from_dto(&state.db, request_body).await?;
+            CourseRepository::add_instructor(&state.db, course.model.course_id, &user).await?;
+
+            Ok(Status::Ok("Course created successfully!".into()))
+        }
+        _ => Err(Status::PermissionDenied(Some(
+            "Only teachers are allowed to create new courses!".into(),
+        ))),
     }
-
-    CourseRepository::create_course(&state.db, &request_body.title).await?;
-
-    Ok(Status::Ok("Course created successfully!".into()))
 }
 
 /// Delete course with specified course identifier (ID)
@@ -157,11 +154,9 @@ mod tests {
     #[tokio::test]
     async fn courses_post_handler_test(#[case] title: &str, #[case] expected: StatusCode) {
         let mut mock = MockCourseRepository::new();
-        mock.expect_create_course().return_once(|title| {
-            let title = title.to_owned();
-
+        mock.expect_create_from_dto().return_once(|course_dto| {
             Box::pin(async move {
-                match title.as_str() {
+                match course_dto.title.as_str() {
                     "success" => Ok(Course {
                         model: entity::course::Model {
                             course_id: 1,
@@ -176,6 +171,9 @@ mod tests {
                 }
             })
         });
+
+        mock.expect_add_instructor()
+            .return_once(|_, _| Box::pin(async move { Ok(()) }));
 
         let router: Router = Router::new()
             .route("/courses", routing::post(create_new_course))
@@ -195,8 +193,10 @@ mod tests {
             .method("POST")
             .header("content-type", "application/json")
             .body(Body::from(
-                serde_json::to_string(&Request {
+                serde_json::to_string(&CourseCreateDTO {
                     title: title.into(),
+                    description: None,
+                    is_active: true,
                 })
                 .unwrap(),
             ))

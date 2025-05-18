@@ -1,27 +1,13 @@
+use crate::models::user::CreateUserDTO;
 use crate::routes::prelude::*;
 
 use crate::repositories::user::UserRepository;
-
-use sea_orm::ActiveEnum;
-use utoipa::ToSchema;
-
-#[derive(Serialize, Deserialize, ToSchema)]
-#[schema(
-    title = "SignupCredentials",
-    description = "Credentials that are required to create new user profile"
-)]
-pub struct Request {
-    pub username: String,
-    pub password: String,
-    pub role: String,
-}
 
 /// Create new user profile
 #[utoipa::path(
     post,
     tag = "Authentication",
     path = "/signup",
-    request_body = Request,
     responses(
         (status = 200, description = "Success"),
         (status = 400, description = "Bad Request"),
@@ -30,25 +16,16 @@ pub struct Request {
 )]
 pub async fn signup_post_handler<S>(
     State(state): State<Arc<AppState<S>>>,
-    Json(request_body): Json<Request>,
+    Json(request_body): Json<CreateUserDTO>,
 ) -> Result<Status, Status>
 where
     S: UserRepository,
 {
-    let Request {
-        username,
-        password,
-        role,
-    } = request_body;
-
-    let role = UserRole::try_from_value(&role)
-        .map_err(|_| Status::InvalidArgument(Some("Invalid user role!".into())))?;
-
     Ok(
-        if let Err(status) = state.db.find_by_username(&username).await {
+        if let Err(status) = state.db.find_by_username(&request_body.username).await {
             match status {
                 Status::NotFound(_) => {
-                    state.db.create(&username, &password, role).await?;
+                    UserRepository::create_from_dto(&state.db, request_body).await?;
 
                     Status::Ok("Operation successful!".into())
                 }
@@ -64,8 +41,6 @@ where
 mod tests {
     use std::sync::Arc;
 
-    use super::Request;
-
     use rstest::rstest;
 
     use axum::{
@@ -76,8 +51,8 @@ mod tests {
     };
     use tower::ServiceExt;
 
-    use crate::app::status::AppStatus as Status;
     use crate::{app::state::AppState, routes::signup::signup_post_handler};
+    use crate::{app::status::AppStatus as Status, models::user::CreateUserDTO};
 
     use crate::models::user::User;
     use crate::repositories::user::MockUserRepository;
@@ -85,13 +60,12 @@ mod tests {
     use entity::sea_orm_active_enums::UserRole;
 
     #[rstest]
-    #[case::success("success", "Student", StatusCode::OK)]
-    #[case::alredy_exists("exists", "Student", StatusCode::CONFLICT)]
-    #[case::wrong_role("success", "Prince", StatusCode::BAD_REQUEST)]
+    #[case::success("success", UserRole::Student, StatusCode::OK)]
+    #[case::alredy_exists("exists", UserRole::Student, StatusCode::CONFLICT)]
     #[tokio::test]
     pub async fn signup_post_handler_test(
         #[case] username: &str,
-        #[case] role: &str,
+        #[case] role: UserRole,
         #[case] expected: StatusCode,
     ) {
         let mut mock = MockUserRepository::new();
@@ -107,8 +81,8 @@ mod tests {
             })
         });
 
-        mock.expect_create()
-            .return_once(|_, _, _| Box::pin(async move { Ok(User::mock_user(UserRole::Student)) }));
+        mock.expect_create_from_dto()
+            .return_once(|_| Box::pin(async move { Ok(User::mock_user(UserRole::Student)) }));
 
         let router = Router::new()
             .route("/signup", routing::post(signup_post_handler))
@@ -125,10 +99,12 @@ mod tests {
             .method("POST")
             .header("content-type", "application/json")
             .body(Body::from(
-                serde_json::to_string(&Request {
+                serde_json::to_string(&CreateUserDTO {
                     username: username.into(),
+                    fullname: None,
+                    description: None,
                     password: "password".into(),
-                    role: role.into(),
+                    role: role,
                 })
                 .unwrap(),
             ))

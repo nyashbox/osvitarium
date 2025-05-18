@@ -3,21 +3,21 @@ use std::sync::Arc;
 use crate::utils::*;
 
 use entity::sea_orm_active_enums::UserRole;
+use osvitarium_backend::models::user::CreateUserDTO;
 use osvitarium_backend::repositories::user::UserRepository;
 use osvitarium_backend::routes::build_routes;
-use osvitarium_backend::routes::signup::Request;
 
 use axum::http::StatusCode;
 
 use rstest::rstest;
 
 #[rstest]
-#[case::success("success", "Student", StatusCode::OK)]
-#[case::exists("exists", "Student", StatusCode::CONFLICT)]
+#[case::success("success", UserRole::Student, StatusCode::OK)]
+#[case::exists("exists", UserRole::Student, StatusCode::CONFLICT)]
 #[tokio::test]
 async fn singup_post_handler(
     #[case] username: &str,
-    #[case] role: &str,
+    #[case] role: UserRole,
     #[case] expected: StatusCode,
 ) {
     let state = Arc::new(build_app_state("secret").await);
@@ -29,10 +29,12 @@ async fn singup_post_handler(
 
     let router = build_routes(state.clone());
 
-    let response = request_post(router, "/signup", &Request {
+    let response = request_post(router, "/signup", &CreateUserDTO {
         username: username.into(),
+        fullname: None,
+        description: None,
         password: "password".into(),
-        role: role.into(),
+        role,
     })
     .await;
 

@@ -1,6 +1,6 @@
 use crate::{
     app::status::AppStatus as Status,
-    models::{Principal, Student, Teacher},
+    models::{Principal, Student, Teacher, user::CreateUserDTO},
     services::utils,
 };
 
@@ -39,6 +39,11 @@ pub trait UserRepository {
         username: &str,
         password: &str,
         role: UserRole,
+    ) -> impl std::future::Future<Output = Result<User, Status>> + Send;
+
+    fn create_from_dto(
+        &self,
+        user: CreateUserDTO,
     ) -> impl std::future::Future<Output = Result<User, Status>> + Send;
 
     /// Find user by ID
@@ -110,6 +115,98 @@ impl UserRepository for sea_orm::DatabaseConnection {
 
         let user_id = user_model.user_id;
         Ok(match role {
+            UserRole::Student => {
+                let student_model = ActiveStudentModel {
+                    user_id: Set(user_id),
+
+                    ..Default::default()
+                }
+                .insert(self)
+                .await
+                .map_err(|e| {
+                    error!("Failed to create 'student' profile: {e}");
+
+                    Status::Internal(None)
+                })?;
+
+                let student = Student {
+                    user_model,
+                    student_model,
+                    attended_courses: None,
+                };
+
+                User::Student(student)
+            }
+            UserRole::Teacher => {
+                let teacher_model = ActiveTeacherModel {
+                    user_id: Set(user_id),
+
+                    ..Default::default()
+                }
+                .insert(self)
+                .await
+                .map_err(|e| {
+                    error!("Failed to create 'teacher' profile: {e}");
+
+                    Status::Internal(None)
+                })?;
+
+                let teacher = Teacher {
+                    user_model,
+                    teacher_model,
+                    instructed_courses: None,
+                };
+
+                User::Teacher(teacher)
+            }
+            UserRole::Principal => {
+                let principal_model = ActivePrincipalModel {
+                    user_id: Set(user_id),
+
+                    ..Default::default()
+                }
+                .insert(self)
+                .await
+                .map_err(|e| {
+                    error!("Failed to create 'principal' profile: {e}");
+
+                    Status::Internal(None)
+                })?;
+
+                let principal = Principal {
+                    user_model,
+                    principal_model,
+                };
+
+                User::Principal(principal)
+            }
+        })
+    }
+
+    async fn create_from_dto(&self, user: CreateUserDTO) -> Result<User, Status> {
+        let password = utils::hash_password(&user.password)?;
+
+        // Create base user
+        let user_model = ActiveUserModel {
+            username: Set(user.username),
+            fullname: Set(user.fullname.unwrap_or("".into())),
+            password: Set(password),
+            description: Set(user.description.unwrap_or("".into())),
+            metadata: Set("{}".into()),
+            role: Set(user.role),
+
+            ..Default::default()
+        }
+        .insert(self)
+        .await
+        .map_err(|e| {
+            error!("Failed to create 'user' record: {e}");
+
+            Status::Internal(None)
+        })?;
+
+        let user_id = user_model.user_id;
+        Ok(match user_model.role {
             UserRole::Student => {
                 let student_model = ActiveStudentModel {
                     user_id: Set(user_id),

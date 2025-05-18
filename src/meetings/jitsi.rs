@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::{
     User,
-    meeting::{Meeting, MeetingRepresentation},
+    meeting::{Meeting, MeetingDTO},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,7 +52,7 @@ pub fn build_jitsi_session(
     app_id: &str,
     secret: &str,
     kid: &str,
-) -> MeetingRepresentation {
+) -> MeetingDTO {
     let mut claims = JitsiClaims {
         aud: "jitsi".into(),
         iss: "chat".into(),
@@ -99,7 +99,7 @@ pub fn build_jitsi_session(
     )
     .unwrap();
 
-    MeetingRepresentation {
+    MeetingDTO {
         meeting_id: meeting.id.clone(),
         join_url: format!("https://8x8.vc/{}/{}?jwt={token}", app_id, claims.room),
         expires_at: "".into(),

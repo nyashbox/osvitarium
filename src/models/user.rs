@@ -1,9 +1,9 @@
 use crate::models::{Principal, Student, Teacher};
 
-use entity::user::Model as UserModel;
+use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
 
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{ToSchema, openapi::schema};
 
 /// Represents user
 #[derive(Clone)]
@@ -21,7 +21,7 @@ pub enum User {
 /// JSON-serializable representation that can be safely returned from the app
 #[derive(Serialize, Deserialize, ToSchema)]
 #[schema(title = "User", description = "User object")]
-pub struct UserRepresentation {
+pub struct UserDTO {
     user_id: i32,
     username: String,
     fullname: String,
@@ -30,14 +30,35 @@ pub struct UserRepresentation {
     role_id: i32,
 }
 
-impl Into<UserRepresentation> for User {
-    fn into(self) -> UserRepresentation {
+/// User creation object
+#[derive(Serialize, Deserialize, ToSchema)]
+#[schema(title = "UserCreate", description = "User creation object")]
+pub struct CreateUserDTO {
+    /// Username
+    pub username: String,
+
+    /// Fullname
+    pub fullname: Option<String>,
+
+    /// Profile description
+    pub description: Option<String>,
+
+    /// Plain-text password
+    pub password: String,
+
+    /// Role
+    #[schema(value_type = String)]
+    pub role: UserRole,
+}
+
+impl Into<UserDTO> for User {
+    fn into(self) -> UserDTO {
         let role = self.role().to_string();
         let role_id = self.role_id();
 
         let user = self.base_model();
 
-        UserRepresentation {
+        UserDTO {
             user_id: user.user_id,
             username: user.username,
             fullname: user.fullname,

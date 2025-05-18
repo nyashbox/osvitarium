@@ -1,8 +1,6 @@
 use axum::http::StatusCode;
 use entity::sea_orm_active_enums::ActivityType;
-use osvitarium_backend::models::Teacher;
 use osvitarium_backend::models::activity::CreateActivityDTO;
-use osvitarium_backend::models::user::UserRepresentation;
 use osvitarium_backend::repositories::course::CourseRepository;
 use osvitarium_backend::{repositories::user::UserRepository, routes::build_routes};
 

@@ -1,4 +1,3 @@
-use crate::middleware::auth;
 use crate::routes::prelude::*;
 
 pub mod courses;

@@ -1,6 +1,6 @@
 use crate::routes::prelude::*;
 
-use crate::models::user::UserRepresentation as Response;
+use crate::models::user::UserDTO;
 
 use crate::repositories::user::UserRepository;
 
@@ -10,7 +10,7 @@ use crate::repositories::user::UserRepository;
     tag = "Profile",
     path = "/me", 
     responses(
-        (status = 200, description = "Success", body = Response),
+        (status = 200, description = "Success", body = UserDTO),
         (status = 401, description = "Unauthenticated")
     ),
     security(
@@ -19,7 +19,7 @@ use crate::repositories::user::UserRepository;
 )]
 pub async fn get_profile_information(
     Extension(user): Extension<User>,
-) -> Result<Json<Response>, Status> {
+) -> Result<Json<UserDTO>, Status> {
     Ok(Json(user.into()))
 }
 

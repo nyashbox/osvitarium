@@ -1,8 +1,8 @@
 use axum::http::StatusCode;
+use osvitarium_backend::models::course::CourseCreateDTO;
 use osvitarium_backend::repositories::course::CourseRepository;
 use osvitarium_backend::{repositories::user::UserRepository, routes::build_routes};
 
-use osvitarium_backend::routes::courses::courses::Request;
 
 use crate::{
     test_builder::TestBuilder,
@@ -37,7 +37,7 @@ pub async fn courses_get_test() {
 
 #[rstest::rstest]
 #[case::success("success", UserRole::Teacher, StatusCode::OK)]
-#[case::wrong_role("success", UserRole::Student, StatusCode::UNAUTHORIZED)]
+#[case::wrong_role("success", UserRole::Student, StatusCode::FORBIDDEN)]
 #[case::exists("exists", UserRole::Teacher, StatusCode::CONFLICT)]
 #[tokio::test]
 pub async fn courses_post_test(
@@ -58,8 +58,10 @@ pub async fn courses_post_test(
         .authenticate_as(Student)
         .with_credentials("username", "password")
         .route("POST", "/courses")
-        .with_body(&Request {
+        .with_body(&CourseCreateDTO {
             title: title.into(),
+            description: None,
+            is_active: true,
         });
 
     let res = request.run().await;

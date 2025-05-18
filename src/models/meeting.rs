@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// JSON-serializable representation that can be safely returned from the app routes
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[schema(title = "Meeting", description = "Meeting object")]
-pub struct MeetingRepresentation {
+pub struct MeetingDTO {
     /// Meeting Identifier
     pub meeting_id: String,
     /// User-specific URL that can be used to join meeting

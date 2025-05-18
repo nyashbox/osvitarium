@@ -4,7 +4,6 @@ use crate::{app::AppStatus as Status, models::activity::CreateActivityDTO};
 
 use crate::models::Activity;
 
-use argon2::password_hash::rand_core::impls;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, EntityTrait, IntoActiveModel, SqlErr};
 

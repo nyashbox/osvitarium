@@ -1,5 +1,6 @@
 use crate::app::status::AppStatus as Status;
 
+use crate::models::course::CourseCreateDTO;
 use crate::models::{Activity, Course, User};
 
 use entity::course::{ActiveModel as ActiveCourseModel, Entity as CourseEntity};
@@ -24,6 +25,21 @@ pub trait CourseRepository {
     fn create_course(
         &self,
         title: &str,
+    ) -> impl std::future::Future<Output = Result<Course, Status>> + Send;
+
+    /// Create new course from course DTO
+    ///
+    /// # Arguments
+    ///
+    /// * 'course' - Course DTO
+    ///
+    /// # Returns
+    ///
+    /// On success: Created course
+    /// On failure: Application status
+    fn create_from_dto(
+        &self,
+        course: CourseCreateDTO,
     ) -> impl std::future::Future<Output = Result<Course, Status>> + Send;
 
     /// Find all courses
@@ -139,6 +155,33 @@ impl CourseRepository for sea_orm::DatabaseConnection {
                 }
             } else {
                 error!("Failed to create new course: {e}");
+
+                Status::Internal(None)
+            }
+        })?;
+
+        Ok(Course {
+            model: course_model,
+        })
+    }
+
+    async fn create_from_dto(&self, course: CourseCreateDTO) -> Result<Course, Status> {
+        let course_model = entity::course::ActiveModel {
+            title: Set(course.title),
+            description: Set(course.description),
+            is_active: Set(course.is_active),
+            ..Default::default()
+        }
+        .insert(self)
+        .await
+        .map_err(|e| {
+            if let Some(sql_error) = e.sql_err() {
+                match sql_error {
+                    SqlErr::UniqueConstraintViolation(_) => Status::AlreadyExists(None),
+                    _ => Status::Internal(None),
+                }
+            } else {
+                error!("Failed to create course from DTO: {e}");
 
                 Status::Internal(None)
             }

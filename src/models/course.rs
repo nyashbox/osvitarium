@@ -1,5 +1,8 @@
 use entity::course::Model as CourseModel;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+use sea_orm::prelude::DateTime;
 
 /// Represents course
 pub struct Course {
@@ -7,23 +10,46 @@ pub struct Course {
     pub model: CourseModel,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct CourseRepresentation {
+#[derive(Serialize, Deserialize, ToSchema)]
+#[schema(title = "Course", description = "Course Object")]
+pub struct CourseDTO {
+    /// Course Identifier (ID)
     pub course_id: i32,
+
+    /// Title
+    pub title: String,
+
+    /// Description
+    pub description: Option<String>,
+
+    /// Is course active?
+    pub is_active: bool,
+
+    /// Course creation date
+    #[schema(value_type = String)]
+    pub created_at: DateTime,
+
+    /// Is course running a meeting?
+    pub is_running_meeting: bool,
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+#[schema(title = "CourseCreate", description = "Course creation Object")]
+pub struct CourseCreateDTO {
     pub title: String,
     pub description: Option<String>,
     pub is_active: bool,
-    pub created_at: String,
 }
 
-impl Into<CourseRepresentation> for Course {
-    fn into(self) -> CourseRepresentation {
-        CourseRepresentation {
+impl Into<CourseDTO> for Course {
+    fn into(self) -> CourseDTO {
+        CourseDTO {
             course_id: self.model.course_id,
             title: self.model.title,
             description: self.model.description,
             is_active: self.model.is_active,
-            created_at: self.model.created_at.to_string(),
+            created_at: self.model.created_at,
+            is_running_meeting: self.model.is_running_meeting,
         }
     }
 }

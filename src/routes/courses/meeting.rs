@@ -1,7 +1,7 @@
 use crate::routes::prelude::*;
 
 use crate::meetings::jitsi::build_jitsi_session;
-use crate::models::meeting::MeetingRepresentation as Response;
+use crate::models::meeting::MeetingDTO;
 
 use crate::repositories::meeting::MeetingRepository;
 
@@ -22,7 +22,7 @@ pub async fn get_course_meeting_credentials<S>(
     Extension(user): Extension<User>,
     State(state): State<Arc<AppState<S>>>,
     Path(course_id): Path<i32>,
-) -> Result<Json<Response>, Status>
+) -> Result<Json<MeetingDTO>, Status>
 where
     S: MeetingRepository + CourseRepository,
 {
@@ -86,7 +86,7 @@ pub async fn create_new_course_meeting<S>(
     Extension(user): Extension<User>,
     State(state): State<Arc<AppState<S>>>,
     Path(course_id): Path<i32>,
-) -> Result<Json<Response>, Status>
+) -> Result<Json<MeetingDTO>, Status>
 where
     S: MeetingRepository + CourseRepository,
 {

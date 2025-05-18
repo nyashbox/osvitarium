@@ -1,6 +1,4 @@
-use crate::{
-    models::user::UserRepresentation, repositories::user::UserRepository, routes::prelude::*,
-};
+use crate::{models::user::UserDTO, repositories::user::UserRepository, routes::prelude::*};
 
 /// Get user profile description
 #[utoipa::path(
@@ -19,7 +17,7 @@ use crate::{
 pub async fn get_user_description<S>(
     State(state): State<Arc<AppState<S>>>,
     Path(user_id): Path<i32>,
-) -> Result<Json<UserRepresentation>, Status>
+) -> Result<Json<UserDTO>, Status>
 where
     S: UserRepository,
 {
