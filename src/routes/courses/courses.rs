@@ -133,6 +133,51 @@ where
     }
 }
 
+/// Join course as an attendee
+#[utoipa::path(
+    put,
+    path = "/courses/{id}/join",
+    tag = "Courses",
+    responses(
+        (status = 200, description = "Success"),
+        (status = 401, description = "Unauthenticated"),
+        (status = 403, description = "Permission denied"),
+    ),
+    security(
+        ("jwt_token" = [])
+    )
+)]
+pub async fn join_course_by_id<S>(
+    Extension(user): Extension<User>,
+    State(state): State<Arc<AppState<S>>>,
+    Path(course_id): Path<i32>,
+) -> Result<Status, Status>
+where
+    S: CourseRepository,
+{
+    match &user {
+        User::Student(student) => {
+            let course = CourseRepository::find_by_id(&state.db, course_id).await?;
+
+            if !student.is_attending(&course) {
+                // Add new attendee
+                CourseRepository::add_attendee(&state.db, course_id, &user).await?;
+
+                Ok(Status::Ok(
+                    "Student was added to the course successfully!".into(),
+                ))
+            } else {
+                Err(Status::AlreadyExists(Some(
+                    "Student already participating in this course!".into(),
+                )))
+            }
+        }
+        _ => Err(Status::PermissionDenied(Some(
+            "Only students can join courses".into(),
+        ))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -59,6 +59,12 @@ where
                 )),
         )
         .route(
+            "/courses/{id}/join",
+            routing::put(courses::courses::join_course_by_id).layer(
+                middleware::from_fn_with_state(state.clone(), auth_middleware),
+            ),
+        )
+        .route(
             "/courses/{id}/meeting",
             routing::get(courses::meeting::get_course_meeting_credentials)
                 .post(courses::meeting::create_new_course_meeting)
@@ -135,6 +141,7 @@ mod docs {
             delete_my_profile,
             get_user_description,
             get_course_activities,
+            join_course_by_id,
             create_course_activity,
         ),
         security(
