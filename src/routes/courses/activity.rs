@@ -73,7 +73,7 @@ where
     }
 }
 
-/// Get all course activities
+/// Create new course acitvity
 #[utoipa::path(
     post,
     tag = "Courses",

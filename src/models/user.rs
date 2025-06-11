@@ -3,7 +3,7 @@ use crate::models::{Principal, Student, Teacher};
 use entity::{sea_orm_active_enums::UserRole, user::Model as UserModel};
 
 use serde::{Deserialize, Serialize};
-use utoipa::{ToSchema, openapi::schema};
+use utoipa::ToSchema;
 
 /// Represents user
 #[derive(Clone)]
@@ -22,11 +22,28 @@ pub enum User {
 #[derive(Serialize, Deserialize, ToSchema)]
 #[schema(title = "User", description = "User object")]
 pub struct UserDTO {
+    /// User Identifier (ID)
+    #[schema(example = 1)]
     user_id: i32,
+
+    /// Username
+    #[schema(example = "john_doe@example.com")]
     username: String,
+
+    /// Fullname
+    #[schema(example = "John Doe")]
     fullname: String,
+
+    /// Profile description
+    #[schema(example = "Cool student")]
     description: String,
-    role: String,
+
+    /// Role
+    #[schema(value_type = String, example = "Student")]
+    role: UserRole,
+
+    /// Role identifier
+    #[schema(example = 1)]
     role_id: i32,
 }
 
@@ -35,25 +52,28 @@ pub struct UserDTO {
 #[schema(title = "UserCreate", description = "User creation object")]
 pub struct CreateUserDTO {
     /// Username
+    #[schema(example = "johndoe@example.com")]
     pub username: String,
 
     /// Fullname
+    #[schema(example = "John Doe", nullable)]
     pub fullname: Option<String>,
 
     /// Profile description
+    #[schema(example = "Profile description", nullable)]
     pub description: Option<String>,
 
     /// Plain-text password
+    #[schema(example = "password")]
     pub password: String,
 
     /// Role
-    #[schema(value_type = String)]
+    #[schema(value_type = String, example = "Student")]
     pub role: UserRole,
 }
 
 impl Into<UserDTO> for User {
     fn into(self) -> UserDTO {
-        let role = self.role().to_string();
         let role_id = self.role_id();
 
         let user = self.base_model();
@@ -63,7 +83,7 @@ impl Into<UserDTO> for User {
             username: user.username,
             fullname: user.fullname,
             description: user.description,
-            role: role,
+            role: user.role,
             role_id: role_id,
         }
     }

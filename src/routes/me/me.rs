@@ -23,6 +23,7 @@ pub async fn get_profile_information(
     Ok(Json(user.into()))
 }
 
+/// Delete user's own profile
 #[utoipa::path(
     delete,
     tag = "Profile",

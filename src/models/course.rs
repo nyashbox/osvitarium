@@ -36,8 +36,13 @@ pub struct CourseDTO {
 #[derive(Serialize, Deserialize, ToSchema)]
 #[schema(title = "CourseCreate", description = "Course creation Object")]
 pub struct CourseCreateDTO {
+    /// title
     pub title: String,
+
+    /// Description
     pub description: Option<String>,
+
+    /// Is course active?
     pub is_active: bool,
 }
 

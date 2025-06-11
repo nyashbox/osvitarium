@@ -13,31 +13,72 @@ pub struct Activity {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[schema(title = "Activity", description = "Activity object")]
 pub struct ActivityDTO {
+    /// Activity identifier
+    #[schema(example = 1)]
     pub activity_id: i32,
+
+    /// Activity title
+    #[schema(example = "Modular test #1")]
     pub title: String,
+
+    /// Description
+    #[schema(example = "Read the theoretical notes of laboratory work №...")]
     pub description: Option<String>,
-    #[schema(value_type = String)]
+
+    /// Activity type
+    #[schema(value_type = String, example = "Material")]
     pub r#type: ActivityType,
+
+    /// Course to which activity belongs
+    #[schema(example = 1)]
     pub course_id: i32,
-    #[schema(value_type = String)]
+
+    /// When activity was created/published
+    #[schema(value_type = String, example = "2025-05-14T13:45:30Z")]
     pub published_at: DateTime,
-    #[schema(value_type = Option<String>)]
+
+    /// Optional deadline for the activity
+    #[schema(value_type = Option<String>, example = "2025-05-14T13:45:30Z", nullable)]
     pub deadline: Option<DateTime>,
+
+    /// Maximum grade for the work performed
+    #[schema(example = 10, nullable)]
     pub points: Option<i32>,
+
+    /// Is this activity hidden?
+    #[schema(example = false)]
     pub is_hidden: bool,
+
+    /// Activity author
+    #[schema(example = 1)]
     pub author_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[schema(title = "CreateActivity", description = "Create activity Object")]
 pub struct CreateActivityDTO {
+    /// Activity title
+    #[schema(example = "Modular test #1")]
     pub title: String,
+
+    /// Description
+    #[schema(example = "Read the theoretical notes of laboratory work №...")]
     pub description: Option<String>,
-    #[schema(value_type = String)]
+
+    /// Activity type
+    #[schema(value_type = String, example = "Material")]
     pub r#type: ActivityType,
-    #[schema(value_type = Option<String>)]
+
+    /// Optional deadline for the task
+    #[schema(value_type = Option<String>, example = "2025-05-14T13:45:30Z", nullable)]
     pub deadline: Option<DateTime>,
+
+    /// Maximum grade for the work performed
+    #[schema(example = 10, nullable)]
     pub points: Option<i32>,
+
+    /// Is this activity hidden?
+    #[schema(example = false)]
     pub is_hidden: bool,
 }
 
