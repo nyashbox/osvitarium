@@ -65,6 +65,18 @@ pub trait MeetingRepository {
         course: &Course,
     ) -> impl Future<Output = Result<Meeting, Status>> + Send;
 
+    /// Get course meeting
+    ///
+    /// # Arguments
+    ///
+    /// * 'course'- Course for which meeting credentials should be received
+    ///
+    /// # Returns
+    ///
+    /// On success: Meeting model
+    /// On failure: Application status
+    fn get_meeting(&self, course: &Course) -> impl Future<Output = Result<Meeting, Status>> + Send;
+
     /// Terminate (stop) course meeting
     ///
     /// # Arguments
@@ -105,6 +117,18 @@ impl MeetingRepository for sea_orm::DatabaseConnection {
             7200,
             MeetingType::Course,
         ))
+    }
+
+    async fn get_meeting(&self, course: &Course) -> Result<Meeting, Status> {
+        if !course.is_running_meeting() {
+            Err(Status::InvalidArgument(None))
+        } else {
+            Ok(Meeting::new(
+                format!("course-{}", course.model.course_id).as_str(),
+                7200,
+                MeetingType::Course,
+            ))
+        }
     }
 
     async fn terminate_course_meeting(

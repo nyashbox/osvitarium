@@ -31,7 +31,7 @@ where
     match &user {
         User::Student(student) => {
             if student.is_attending(&course) {
-                let meeting = MeetingRepository::create_course_meeting(&state.db, &course).await?;
+                let meeting = MeetingRepository::get_meeting(&state.db, &course).await?;
 
                 Ok(Json(build_jitsi_session(
                     &meeting,
